@@ -1,46 +1,14 @@
-// KCopyMoney Service Worker
-// 전략: 앱 껍데기(HTML/아이콘)는 캐시, 실시간 데이터(/api/)는 항상 네트워크
-const CACHE = 'kcm-v1';
-const SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
-];
+// 방치형 돈복사 · service worker (PWA 토대)
+// 현재는 설치/활성화만. 백그라운드 웹푸시(push 이벤트)는 별도 단계에서 추가 예정.
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => self.clients.claim());
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-
-  // 매매 데이터는 절대 캐시하지 않음 — 항상 최신을 네트워크에서
-  if (url.pathname.startsWith('/api/')) {
-    e.respondWith(fetch(e.request));
-    return;
-  }
-
-  // 그 외(앱 껍데기)는 캐시 우선, 없으면 네트워크 후 캐시에 저장
-  e.respondWith(
-    caches.match(e.request).then(cached =>
-      cached || fetch(e.request).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-        return res;
-      }).catch(() => cached)
-    )
-  );
-});
+// 향후 웹푸시용 자리 (지금은 미사용):
+// self.addEventListener('push', e => {
+//   const d = e.data ? e.data.json() : {};
+//   e.waitUntil(self.registration.showNotification(d.title||'방치형 돈복사', {body:d.body||''}));
+// });
+// self.addEventListener('notificationclick', e => {
+//   e.notification.close();
+//   e.waitUntil(self.clients.openWindow('./index.html'));
+// });

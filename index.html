@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0b1416">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#f5f6f8">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="KCopyMoney">
-<title>KCopyMoney — Trading Monitor</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="방치형 돈복사">
+<link rel="manifest" href="manifest.json">
+<title>방치형 돈복사</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Sora:wght@400;600;700;800&display=swap');
   :root{
@@ -39,7 +38,7 @@
       radial-gradient(900px 500px at 80% -10%, var(--glow1), transparent 60%),
       radial-gradient(700px 400px at -10% 10%, var(--glow2), transparent 55%),
       var(--bg);}
-  body{max-width:480px;margin:0 auto;padding-bottom:72px;min-height:100vh;
+  body{max-width:480px;margin:0 auto;padding-bottom:94px;min-height:100vh;
     background:radial-gradient(900px 500px at 80% -10%, var(--glow1), transparent 60%),
       radial-gradient(700px 400px at -10% 10%, var(--glow2), transparent 55%),var(--bg);}
   .topbar{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
@@ -136,7 +135,7 @@
   .sig .l1{display:flex;justify-content:space-between;align-items:baseline;}
   .sig .act{font-family:'JetBrains Mono';font-weight:700;font-size:13px;}
   .sig .t{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);}
-  .sig .l2{font-size:12px;color:var(--txt-dim);margin-top:3px;}
+  .sig .l2{font-size:12px;color:var(--txt-dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .sig .l2 b{font-family:'JetBrains Mono';color:var(--num);font-weight:700;}
   /* history */
   .filterrow{margin:2px 0 10px;}
@@ -241,7 +240,7 @@
   .rk .metric.rs{color:var(--green);}
   .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
     background:var(--bar-bg);backdrop-filter:blur(16px);border-top:1px solid var(--line);
-    display:flex;padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:50;}
+    display:flex;padding:9px 6px calc(22px + env(safe-area-inset-bottom));z-index:50;}
   .nav button{flex:1;background:none;border:none;color:var(--txt-faint);
     display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer;
     font-family:'JetBrains Mono';font-size:8px;font-weight:600;letter-spacing:0;transition:color .2s;}
@@ -251,6 +250,7 @@
 </style>
 </head>
 <body>
+<script>if((localStorage.getItem('cm_theme')||'light')==='light')document.body.classList.add('light');</script>
 <div class="topbar"><div class="toprow">
   <div class="brand">K<b>CopyMoney</b></div>
     <button id="themeToggle" class="themebtn" aria-label="테마 전환">
@@ -264,112 +264,26 @@
 </div></div>
 
 <section class="page active" id="home">
-  <div class="hero">
-    <div class="lbl">계좌 평가금액</div>
-    <div class="equity">₩168,750,000</div>
-    <div class="chg"><span class="pill">▲ +₩3,074,000</span><span>+1.86% 오늘</span></div>
-    <svg class="spark" viewBox="0 0 320 46" preserveAspectRatio="none">
-      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(31,209,122,.35)"/>
-        <stop offset="100%" stop-color="rgba(31,209,122,0)"/></linearGradient></defs>
-      <path d="M0,38 L26,34 L52,36 L78,28 L104,30 L130,22 L156,25 L182,16 L208,19 L234,11 L260,14 L286,7 L320,4" fill="none" stroke="var(--green)" stroke-width="2"/>
-      <path d="M0,38 L26,34 L52,36 L78,28 L104,30 L130,22 L156,25 L182,16 L208,19 L234,11 L260,14 L286,7 L320,4 L320,46 L0,46 Z" fill="url(#g)"/>
-    </svg>
-  </div>
-  <div class="grid2">
-    <div class="stat"><div class="k">오픈 포지션</div><div class="v">5</div><div class="sub">종목 보유 중</div></div>
-    <div class="stat"><div class="k">피벗 근접</div><div class="v amber">3</div><div class="sub">관심종목 돌파임박</div></div>
-    <div class="stat"><div class="k">승률 (30일)</div><div class="v green">68%</div><div class="sub">17승 8패</div></div>
-    <div class="stat"><div class="k">평균 손익비</div><div class="v">2.4R</div><div class="sub">평균 수익/손실</div></div>
-  </div>
+  <div id="homeHero"></div>
+  <div class="grid2" id="homeStats"></div>
   <div class="sec-label" style="margin-top:18px">최근 시그널</div>
-  <div class="sig"><div class="ic buy">BUY</div><div class="body">
-    <div class="l1"><span class="act green">매수 체결 · NVDA</span><span class="t">09:41</span></div>
-    <div class="l2"><b>142.30</b> 피벗 돌파 진입 · 손절 <b>136.50</b></div></div></div>
-  <div class="sig"><div class="ic watch">ADD</div><div class="body">
-    <div class="l1"><span class="act purple">관심종목 추가 · AVGO</span><span class="t">09:18</span></div>
-    <div class="l2">베이스 형성 감지 · 피벗 <b>178.00</b> 설정</div></div></div>
-  <div class="sig"><div class="ic stop">STP</div><div class="body">
-    <div class="l1"><span class="act amber">손절선 상향 · AAPL</span><span class="t">어제</span></div>
-    <div class="l2">손절 <b>178.00 → 184.20</b> 추격 조정</div></div></div>
+  <div id="homeSignals"></div>
 </section>
 
 <section class="page" id="positions">
   <div class="sec-label">보유 종목 · 수익률 높은 순</div>
-  <div class="pos"><div class="accent"></div>
-    <div class="hd"><span class="sym">META</span>
-      <div class="plwrap"><div class="pl green">+12.7%</div><div class="plamt green">+₩9,030,000</div></div></div>
-    <div class="meta"><span class="m">진입 <b>488.00</b></span><span class="m">현재 <b>550.00</b></span><span class="m">보유 <b>18일</b></span></div>
-    <div class="stopline"><span class="sl">손절 512.00</span><span class="sv green">↓ stop까지 −6.9%</span></div></div>
-  <div class="pos"><div class="accent"></div>
-    <div class="hd"><span class="sym">AAPL</span>
-      <div class="plwrap"><div class="pl green">+8.2%</div><div class="plamt green">+₩3,940,000</div></div></div>
-    <div class="meta"><span class="m">진입 <b>182.50</b></span><span class="m">현재 <b>197.40</b></span><span class="m">보유 <b>12일</b></span></div>
-    <div class="stopline"><span class="sl">손절 184.20</span><span class="sv green">↓ stop까지 −6.7%</span></div></div>
-  <div class="pos"><div class="accent"></div>
-    <div class="hd"><span class="sym">MSFT</span>
-      <div class="plwrap"><div class="pl green">+5.9%</div><div class="plamt green">+₩2,510,000</div></div></div>
-    <div class="meta"><span class="m">진입 <b>402.00</b></span><span class="m">현재 <b>425.70</b></span><span class="m">보유 <b>9일</b></span></div>
-    <div class="stopline"><span class="sl">손절 398.00</span><span class="sv green">↓ stop까지 −6.5%</span></div></div>
-  <div class="pos"><div class="accent"></div>
-    <div class="hd"><span class="sym">NVDA</span>
-      <div class="plwrap"><div class="pl green">+3.4%</div><div class="plamt green">+₩450,000</div></div></div>
-    <div class="meta"><span class="m">진입 <b>142.30</b></span><span class="m">현재 <b>147.15</b></span><span class="m">보유 <b>2일</b></span></div>
-    <div class="stopline"><span class="sl">손절 136.50</span><span class="sv amber">↓ stop까지 −7.2%</span></div></div>
-  <div class="pos loss danger"><div class="accent"></div>
-    <div class="hd"><span class="sym">TSLA</span>
-      <div class="plwrap"><div class="pl red">−2.1%</div><div class="plamt red">−₩675,000</div></div></div>
-    <div class="meta"><span class="m">진입 <b>242.00</b></span><span class="m">현재 <b>236.90</b></span><span class="m">보유 <b>4일</b></span></div>
-    <div class="stopline"><span class="sl">손절 234.50</span><span class="sv red">↓ stop까지 −1.0%</span></div></div>
+  <div id="posList"></div>
 </section>
 
 <section class="page" id="watch">
-  <div class="wgroup">
-    <div class="wghead"><span class="tag green">🔥 BREAKOUT</span><span class="cnt">1</span></div>
-    <div class="witem"><div class="l"><div class="symrow"><div class="sym">CRWD</div><span class="rs hi">RS 96</span></div><div class="pv">피벗 312.00 · 돌파</div></div>
-      <div class="r"><div class="px">318.40</div><div class="d green">+2.1% ▲</div></div></div></div>
-  <div class="wgroup">
-    <div class="wghead"><span class="tag amber">⚡ PIVOT 근접</span><span class="cnt">3</span></div>
-    <div class="witem"><div class="l"><div class="symrow"><div class="sym">AVGO</div><span class="rs hi">RS 91</span></div><div class="pv">피벗 178.00</div></div>
-      <div class="r"><div class="px">176.60</div><div class="d amber">−0.8%</div></div></div>
-    <div class="witem"><div class="l"><div class="symrow"><div class="sym">PANW</div><span class="rs hi">RS 88</span></div><div class="pv">피벗 195.50</div></div>
-      <div class="r"><div class="px">193.20</div><div class="d amber">−1.2%</div></div></div>
-    <div class="witem"><div class="l"><div class="symrow"><div class="sym">SMCI</div><span class="rs mid">RS 74</span></div><div class="pv">피벗 48.00</div></div>
-      <div class="r"><div class="px">47.10</div><div class="d amber">−1.9%</div></div></div></div>
-  <div class="wgroup">
-    <div class="wghead"><span class="tag" style="color:var(--txt-dim)">⏳ BASING</span><span class="cnt">2</span></div>
-    <div class="witem"><div class="l"><div class="symrow"><div class="sym">ANET</div><span class="rs mid">RS 72</span></div><div class="pv">베이스 형성 6주차</div></div>
-      <div class="r"><div class="px">88.50</div><div class="d" style="color:var(--txt-faint)">관찰</div></div></div>
-    <div class="witem"><div class="l"><div class="symrow"><div class="sym">DDOG</div><span class="rs lo">RS 61</span></div><div class="pv">베이스 형성 4주차</div></div>
-      <div class="r"><div class="px">128.30</div><div class="d" style="color:var(--txt-faint)">관찰</div></div></div></div>
+  <div id="watchList"></div>
 </section>
 
 <section class="page" id="signals">
   <div class="sec-label">시그널 피드 · 실시간</div>
-  <div class="sig"><div class="ic buy">BUY</div><div class="body">
-    <div class="l1"><span class="act green">매수 체결 · NVDA</span><span class="t">09:41:22</span></div>
-    <div class="l2"><b>142.30</b> × 70주 · 피벗 돌파 진입 · 손절 <b>136.50</b></div></div></div>
-  <div class="sig"><div class="ic watch">ADD</div><div class="body">
-    <div class="l1"><span class="act purple">관심종목 추가 · AVGO</span><span class="t">09:18:05</span></div>
-    <div class="l2">베이스 형성 감지 · 피벗 <b>178.00</b> 설정 · 돌파 대기</div></div></div>
-  <div class="sig"><div class="ic buy">BUY</div><div class="body">
-    <div class="l1"><span class="act green">매수 체결 · CRWD</span><span class="t">09:02:47</span></div>
-    <div class="l2"><b>313.10</b> × 30주 · 손절 <b>298.00</b></div></div></div>
-  <div class="sig"><div class="ic watch">ADD</div><div class="body">
-    <div class="l1"><span class="act purple">관심종목 추가 · ANET</span><span class="t">어제 16:02</span></div>
-    <div class="l2">베이스 형성 6주차 진입 · 관찰 시작</div></div></div>
-  <div class="sig"><div class="ic stop">STP</div><div class="body">
-    <div class="l1"><span class="act amber">손절선 상향 · AAPL</span><span class="t">어제 15:30</span></div>
-    <div class="l2">손절 <b>178.00 → 184.20</b> 추격 조정</div></div></div>
-  <div class="sig"><div class="ic sell">SEL</div><div class="body">
-    <div class="l1"><span class="act red">매도 체결 · COIN</span><span class="t">어제 14:11</span></div>
-    <div class="l2"><b>198.40</b> 청산 · +14.2% 익절 (+2.8R)</div></div></div>
-  <div class="sig"><div class="ic alert">ALT</div><div class="body">
-    <div class="l1"><span class="act blue">시장 국면 · KR 강세 전환</span><span class="t">어제 09:30</span></div>
-    <div class="l2">코스피 50일선 회복 · 공격 모드</div></div></div>
+  <div id="sigList"></div>
 </section>
 
-<!-- ════ HISTORY ════ -->
 <section class="page" id="history">
   <div class="sec-label">매매 이력 · 청산 종목</div>
   <div class="filterrow">
@@ -385,76 +299,27 @@
       <button class="chip" data-p="all">전체</button>
     </div>
   </div>
-
   <div class="summary">
     <div class="biglbl">기간 실현손익 <span id="sumScope" style="color:var(--txt-faint)">· 전체 · 1개월</span></div>
-    <div class="big green" id="sumPL">+₩12,480,000</div>
+    <div class="big green" id="sumPL">—</div>
     <div class="mini">
-      <div><div class="k">승률</div><div class="v green" id="sumWin">71%</div></div>
-      <div><div class="k">손익비</div><div class="v" id="sumRR">2.6</div></div>
-      <div><div class="k">매매</div><div class="v" id="sumN">14건</div></div>
+      <div><div class="k">승률</div><div class="v green" id="sumWin">—</div></div>
+      <div><div class="k">손익비</div><div class="v" id="sumRR">—</div></div>
+      <div><div class="k">매매</div><div class="v" id="sumN">—</div></div>
     </div>
   </div>
-
-  <div id="tradeList">
-    <div class="trade" data-mkt="us"><div class="accent"></div>
-      <div class="hd"><div class="symwrap"><span class="sym">COIN</span><span class="flag">US</span></div>
-        <div><div class="pl green">+14.2%</div><div class="plr green">+₩5,120,000 · +2.8R</div></div></div>
-      <div class="meta"><span class="m">진입 <b>173.80</b></span><span class="m">청산 <b>198.40</b></span><span class="m">보유 <b>11일</b></span><span class="m">06/02</span></div>
-    </div>
-    <div class="trade" data-mkt="kr"><div class="accent"></div>
-      <div class="hd"><div class="symwrap"><span class="sym">에코프로</span><span class="flag">KR</span></div>
-        <div><div class="pl green">+9.6%</div><div class="plr green">+₩3,840,000 · +1.9R</div></div></div>
-      <div class="meta"><span class="m">진입 <b>92,400</b></span><span class="m">청산 <b>101,300</b></span><span class="m">보유 <b>8일</b></span><span class="m">05/28</span></div>
-    </div>
-    <div class="trade" data-mkt="us"><div class="accent"></div>
-      <div class="hd"><div class="symwrap"><span class="sym">SMCI</span><span class="flag">US</span></div>
-        <div><div class="pl green">+22.4%</div><div class="plr green">+₩6,710,000 · +3.4R</div></div></div>
-      <div class="meta"><span class="m">진입 <b>38.20</b></span><span class="m">청산 <b>46.75</b></span><span class="m">보유 <b>15일</b></span><span class="m">05/21</span></div>
-    </div>
-    <div class="trade loss" data-mkt="kr"><div class="accent"></div>
-      <div class="hd"><div class="symwrap"><span class="sym">포스코퓨처엠</span><span class="flag">KR</span></div>
-        <div><div class="pl red">−6.8%</div><div class="plr red">−₩1,360,000 · −1.0R</div></div></div>
-      <div class="meta"><span class="m">진입 <b>284,000</b></span><span class="m">청산 <b>264,700</b></span><span class="m">보유 <b>5일</b></span><span class="m">05/15</span></div>
-    </div>
-    <div class="trade loss" data-mkt="us"><div class="accent"></div>
-      <div class="hd"><div class="symwrap"><span class="sym">PLTR</span><span class="flag">US</span></div>
-        <div><div class="pl red">−7.1%</div><div class="plr red">−₩1,830,000 · −1.0R</div></div></div>
-      <div class="meta"><span class="m">진입 <b>24.60</b></span><span class="m">청산 <b>22.85</b></span><span class="m">보유 <b>3일</b></span><span class="m">05/09</span></div>
-    </div>
-  </div>
+  <div id="tradeList"></div>
 </section>
 
-<!-- ════ MARKET / SCREENER ════ -->
 <section class="page" id="market">
-  <div class="sec-label">시장 국면 · 분산일/추격일 <span style="color:var(--txt-faint);text-transform:none;letter-spacing:0">· 탭하여 시장 선택</span></div>
-
-  <div class="regcard bull" id="cardKR" data-mkt="kr">
-    <div class="top"><span class="mtitle"><span class="mname">🇰🇷 KOSPI</span><span class="pick">선택됨</span></span><span class="verdict">강세 · 공격</span></div>
-    <div class="rows">
-      <div class="regrow"><span class="lbl">분산일 (DD, 25일)</span>
-        <span class="ddbar"><i class="hit"></i><i class="hit"></i><i></i><i></i><i></i><i></i></span></div>
-      <div class="regrow"><span class="lbl">마지막 추격일 (FTD)</span><span class="val green">05/12 · 5일차 확인</span></div>
-      <div class="regrow"><span class="lbl">지수 vs 50일선</span><span class="val green">+3.2% 위 ▲</span></div>
-      <div class="regrow"><span class="lbl">50일선 vs 200일선</span><span class="val green">정배열 ▲</span></div>
-    </div>
-  </div>
-
-  <div class="regcard bear" id="cardUS" data-mkt="us">
-    <div class="top"><span class="mtitle"><span class="mname">🇺🇸 S&amp;P 500</span><span class="pick">선택됨</span></span><span class="verdict">약세 · 방어</span></div>
-    <div class="rows">
-      <div class="regrow"><span class="lbl">분산일 (DD, 25일)</span>
-        <span class="ddbar"><i class="hit"></i><i class="hit"></i><i class="hit"></i><i class="hit"></i><i class="hit"></i><i></i></span></div>
-      <div class="regrow"><span class="lbl">마지막 추격일 (FTD)</span><span class="val" style="color:var(--txt-faint)">미발생 · 대기</span></div>
-      <div class="regrow"><span class="lbl">지수 vs 50일선</span><span class="val red">−1.8% 아래 ▼</span></div>
-      <div class="regrow"><span class="lbl">50일선 vs 200일선</span><span class="val red">역배열 ▼</span></div>
-    </div>
-  </div>
-
+  <div class="sec-label">시장 국면 <span style="color:var(--txt-faint);text-transform:none;letter-spacing:0">· 탭하여 시장 선택</span></div>
+  <div id="cardKR"></div>
+  <div id="cardUS"></div>
   <div class="sec-label" style="margin-top:18px">오늘의 주도주 · <span id="mktLabelLead">국장</span> 거래대금 상위</div>
   <div id="leadList"></div>
   <button class="morebtn" id="moreBtn">전체 순위 더보기 · 거래대금 / RS 상위 50</button>
 </section>
+
 
 <!-- ════ RANKING SHEET ════ -->
 <div class="sheet" id="rankSheet">
@@ -479,200 +344,258 @@
   <button data-t="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>이력</button>
 </nav>
 <script>
-  const btns=document.querySelectorAll('.nav button');
-  const pages=document.querySelectorAll('.page');
-  btns.forEach(b=>b.addEventListener('click',()=>{
-    btns.forEach(x=>x.classList.remove('active'));
-    pages.forEach(p=>p.classList.remove('active'));
-    b.classList.add('active');
-    document.getElementById(b.dataset.t).classList.add('active');
-    window.scrollTo({top:0,behavior:'smooth'});
-  }));
+const STATE_URL='state.json', REFRESH_MS=30000;
+let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicked=false;
 
-  // ── history filters ──
-  const mktName={all:'전체',kr:'KR',us:'US'};
-  const perName={'1m':'1개월','3m':'3개월','ytd':'YTD','all':'전체'};
-  // 더미 집계표: [시장][기간] = {pl, win, rr, n}  (실제 연동 시 API가 내려줌)
-  const agg={
-    all:{'1m':['+₩12,480,000','71%','2.6','14건',1],'3m':['+₩31,200,000','68%','2.4','38건',1],'ytd':['+₩64,900,000','66%','2.5','82건',1],'all':['+₩88,300,000','67%','2.5','119건',1]},
-    kr: {'1m':['+₩2,480,000','67%','1.8','6건',1],'3m':['+₩9,100,000','64%','1.9','17건',1],'ytd':['+₩18,600,000','63%','2.0','34건',1],'all':['+₩22,400,000','64%','2.0','45건',1]},
-    us: {'1m':['+₩10,000,000','75%','3.1','8건',1],'3m':['+₩22,100,000','71%','2.8','21건',1],'ytd':['+₩46,300,000','69%','2.9','48건',1],'all':['+₩65,900,000','70%','2.9','74건',1]},
-  };
-  let curM='all',curP='1m';
-  function applyHist(){
-    const d=agg[curM][curP];
-    const pl=document.getElementById('sumPL');
-    pl.textContent=d[0];
-    pl.className='big '+(d[0].startsWith('-')?'red':'green');
-    document.getElementById('sumWin').textContent=d[1];
-    document.getElementById('sumRR').textContent=d[2];
-    document.getElementById('sumN').textContent=d[3];
-    document.getElementById('sumScope').textContent='· '+mktName[curM]+' · '+perName[curP];
-    document.querySelectorAll('#tradeList .trade').forEach(t=>{
-      t.style.display=(curM==='all'||t.dataset.mkt===curM)?'':'none';
-    });
+// ── 탭 네비 ──
+const btns=document.querySelectorAll('.nav button'), pages=document.querySelectorAll('.page');
+btns.forEach(b=>b.addEventListener('click',()=>{
+  btns.forEach(x=>x.classList.remove('active'));
+  pages.forEach(p=>p.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById(b.dataset.t).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}));
+
+// ── 테마 토글 ──
+document.getElementById('themeToggle').addEventListener('click',()=>{
+  document.body.classList.toggle('light');
+  const dark=!document.body.classList.contains('light');
+  document.querySelector('meta[name=theme-color]').setAttribute('content',dark?'#0b1416':'#f5f6f8');
+  localStorage.setItem('cm_theme',dark?'dark':'light');
+});
+
+// ── 포맷 헬퍼 ──
+const won=n=>'₩'+Math.round(n||0).toLocaleString('en-US');
+let hideBal=localStorage.getItem('cm_hidebal')==='1';
+const maskWon=n=>hideBal?'₩ ••••••':won(n);
+const maskSignWon=n=>hideBal?'••••••':signWon(n);
+const signWon=n=>(n>=0?'+':'−')+'₩'+Math.abs(Math.round(n||0)).toLocaleString('en-US');
+const signPct=n=>(n>=0?'+':'−')+Math.abs(n||0).toFixed(2)+'%';
+const px=(v,mkt)=>mkt==='US'?'$'+(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):Math.round(+v||0).toLocaleString('en-US');
+const cls=n=>n>=0?'green':'red';
+const rsCls=v=>v>=85?'hi':(v>=70?'mid':'lo');
+const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const emptyMsg=t=>`<div style="text-align:center;color:var(--txt-faint);font-family:'JetBrains Mono';font-size:12px;padding:30px 0">${t}</div>`;
+const fmtVal=v=>typeof v==='number'?v.toLocaleString('en-US'):(v||'');
+function fmtTV(v,mkt){ if(typeof v!=='number') return v||''; if(mkt==='kr') return Math.round(v/1e8).toLocaleString('en-US')+'억'; return (v/1e6).toLocaleString('en-US',{maximumFractionDigits:1})+'M$'; }
+
+// ── 데이터 로드 ──
+async function load(){
+  try{
+    const r=await fetch(STATE_URL+'?t='+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    STATE=await r.json(); renderAll(); checkNewSignals();
+  }catch(e){
+    console.error('state load failed',e);
+    if(!STATE) document.getElementById('homeHero').innerHTML=
+      '<div class="hero"><div class="lbl">데이터를 불러오지 못했습니다</div><div class="equity" style="font-size:17px">state.json 확인 필요</div></div>';
   }
-  document.querySelectorAll('#segMarket .chip').forEach(c=>c.addEventListener('click',()=>{
-    document.querySelectorAll('#segMarket .chip').forEach(x=>x.classList.remove('on'));
-    c.classList.add('on');curM=c.dataset.m;applyHist();
-  }));
-  document.querySelectorAll('#segPeriod .chip').forEach(c=>c.addEventListener('click',()=>{
-    document.querySelectorAll('#segPeriod .chip').forEach(x=>x.classList.remove('on'));
-    c.classList.add('on');curP=c.dataset.p;applyHist();
-  }));
+}
+function renderAll(){
+  renderTopMarkets(); renderHome(); renderPositions(); renderWatch();
+  renderSignals(); renderHistory(); renderMarketCards(); renderMarket(curMarket);
+}
 
-  // ── theme toggle ──
-  document.getElementById('themeToggle').addEventListener('click',()=>{
-    document.body.classList.toggle('light');
-    const dark=!document.body.classList.contains('light');
-    document.querySelector('meta[name=theme-color]').setAttribute('content',dark?'#0b1416':'#f5f6f8');
+// ── 스파크라인 ──
+function spark(series){
+  if(!series||series.length<2) return '';
+  const w=320,h=46,mn=Math.min(...series),mx=Math.max(...series),rng=(mx-mn)||1;
+  const pts=series.map((v,i)=>((i/(series.length-1))*w).toFixed(0)+','+(h-4-((v-mn)/rng)*(h-8)).toFixed(1));
+  const line='M'+pts.join(' L');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(31,209,122,.35)"/><stop offset="100%" stop-color="rgba(31,209,122,0)"/></linearGradient></defs>
+    <path d="${line}" fill="none" stroke="var(--green)" stroke-width="2"/><path d="${line} L${w},${h} L0,${h} Z" fill="url(#g)"/></svg>`;
+}
+
+// ── 상단바 시장 배지 ──
+function renderTopMarkets(){
+  const m=STATE.markets||{};
+  const badge=(nm,d)=>{const bull=d&&d.regime==='강세';
+    return `<div class="mkt ${bull?'bull':'bear'}"><span class="dot"></span><span class="nm">${nm}</span><span class="st">${d?(bull?'강세':'약세'):'—'}</span></div>`;};
+  const el=document.querySelector('.markets'); if(el) el.innerHTML=badge('KR',m.kr)+badge('US',m.us);
+}
+
+// ── 홈 ──
+function renderHome(){
+  const a=STATE.account||{}, s=STATE.stats||{}, up=(a.day_change_krw||0)>=0;
+  document.getElementById('homeHero').innerHTML=
+    `<div class="hero"><div class="lbl">계좌 평가금액 <span id="eyeBtn" style="cursor:pointer;margin-left:4px;opacity:.65;font-size:13px">${hideBal?'🙈':'👁'}</span></div><div class="equity">${maskWon(a.equity_krw)}</div>
+     <div class="chg" style="color:var(--${up?'green':'red'})"><span class="pill" style="background:var(--${up?'green':'red'}-bg)">${up?'▲':'▼'} ${maskSignWon(a.day_change_krw)}</span><span>${signPct(a.day_change_pct)} 오늘</span></div>
+     ${spark(a.equity_series)}</div>`;
+  document.getElementById('homeStats').innerHTML=
+    `<div class="stat"><div class="k">오픈 포지션</div><div class="v">${s.open_positions||0}</div><div class="sub">종목 보유 중</div></div>
+     <div class="stat"><div class="k">피벗 근접</div><div class="v amber">${s.pivot_near||0}</div><div class="sub">관심종목 돌파임박</div></div>
+     <div class="stat"><div class="k">승률 (30일)</div><div class="v green">${Math.round(s.win_rate_30d||0)}%</div><div class="sub">${s.wins_30d||0}승 ${s.losses_30d||0}패</div></div>
+     <div class="stat"><div class="k">평균 손익비</div><div class="v">${(s.avg_rr||0).toFixed(1)}R</div><div class="sub">평균 수익/손실</div></div>`;
+  const sigs=(STATE.signals_recent||[]).slice(0,3);
+  document.getElementById('homeSignals').innerHTML=sigs.length?sigs.map(sigRow).join(''):emptyMsg('시그널 없음');
+  const eb=document.getElementById('eyeBtn'); if(eb) eb.onclick=()=>{hideBal=!hideBal;localStorage.setItem('cm_hidebal',hideBal?'1':'0');renderHome();};
+}
+
+// ── 시그널 행 ──
+const SIG_META={buy:['buy','BUY','green','매수 체결'],sell:['sell','SEL','red','매도 체결'],add:['watch','ADD','purple','관심종목 추가'],bo:['watch','BO','blue','피벗 돌파'],stop:['stop','STP','amber','손절선 조정'],alert:['alert','ALT','blue','시장 국면']};
+function sigRow(s){
+  const m=SIG_META[s.type]||['alert','·','blue',s.type], t=s.ts?s.ts.slice(11,19):'';
+  let l2;
+  if(s.type==='buy'){
+    const amt=s.amount!=null?s.amount:((s.price&&s.qty)?s.price*s.qty:null);
+    l2=`${esc(s.note||'피벗 돌파 진입')}${s.price!=null?` · 진입 <b>${s.price}</b>`:''}${amt!=null?` · 매수금액 <b>${Math.round(amt).toLocaleString('en-US')}원</b>`:''}`;
+  }else if(s.type==='bo'){
+    l2=`피벗 <b>${s.pivot!=null?s.pivot:(s.price||'')}</b>${s.price!=null?` · 현재 <b>${s.price}</b>`:''}`;
+  }else{
+    l2=`${esc(s.note||'')}${s.price!=null?` · <b>${s.price}</b>`:''}${s.stop!=null?` · 손절 <b>${s.stop}</b>`:''}`;
+  }
+  return `<div class="sig"><div class="ic ${m[0]}">${m[1]}</div><div class="body">
+    <div class="l1"><span class="act ${m[2]}">${m[3]} · ${s.market==='KR'?esc(s.name||s.sym):esc(s.sym)}</span><span class="t">${t}</span></div>
+    <div class="l2">${l2}</div></div></div>`;
+}
+
+// ── 보유 ──
+function renderPositions(){
+  const ps=(STATE.positions||[]).slice().sort((a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
+  document.getElementById('posList').innerHTML=ps.length?ps.map(p=>{
+    const loss=p.is_loss||(p.pl_pct||0)<0, c=loss?'red':'green', danger=(p.stop_dist_pct!=null&&Math.abs(p.stop_dist_pct)<2);
+    return `<div class="pos ${loss?'loss':''} ${danger?'danger':''}"><div class="accent"></div>
+      <div class="hd"><span class="sym">${esc(p.sym)}</span><div class="plwrap"><div class="pl ${c}">${signPct(p.pl_pct)}</div><div class="plamt ${c}">${signWon(p.pl_krw)}</div></div></div>
+      <div class="meta"><span class="m">진입 <b>${px(p.entry,p.market)}</b></span><span class="m">현재 <b>${px(p.current,p.market)}</b></span><span class="m">보유 <b>${p.hold_days||0}일</b></span></div>
+      <div class="stopline"><span class="sl">손절 ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div>`;
+  }).join(''):emptyMsg('보유 종목 없음');
+}
+
+// ── 관심 ──
+function renderWatch(){
+  const ws=STATE.watchlist||[], groups=[['breakout','🔥 BREAKOUT','green'],['pivot_near','⚡ PIVOT 근접','amber'],['basing','⏳ BASING','']];
+  if(!ws.length){document.getElementById('watchList').innerHTML=emptyMsg('관심종목 없음');return;}
+  let html='';
+  groups.forEach(([key,label,color])=>{
+    const items=ws.filter(w=>w.group===key);
+    html+=`<div class="wgroup"><div class="wghead"><span class="tag ${color}" ${color?'':'style="color:var(--txt-dim)"'}>${label}</span><span class="cnt">${items.length}</span></div>`;
+    html+=items.length?items.map(w=>{
+      const up=(w.change_pct||0)>=0, dCls=key==='basing'?'':(up?'green':'amber'), dTxt=key==='basing'?'관찰':signPct(w.change_pct)+(up?' ▲':'');
+      const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub=isKR?esc(w.sym):'';
+      const volTxt=(key==='breakout'&&w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:(key==='breakout'?' · 돌파':'');
+      return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
+        <div class="pv">${sub?`${sub} · `:''}${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</div></div>
+        <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>`;
+    }).join(''):`<div class="witem" style="opacity:.45"><div class="l"><div class="pv">없음</div></div></div>`;
+    html+='</div>';
   });
+  document.getElementById('watchList').innerHTML=html;
+}
 
-  // ── market screener (KR/US 분리) ──
-  const rsClass=v=>v>=70?'green':(v>=50?'amber':'');
-  const rsPctClass=v=>v>=70?'pct green':'pct amber';
-  const mktData={
-    kr:{
-      label:'국장',
-      leaders:[
-        ['한미반도체',97,'52주 신고가 −1.2%','₩8,420억'],
-        ['에코프로비엠',92,'신고가 −3.4%','₩6,150억'],
-        ['한화에어로',89,'신고가 돌파','₩4,730억'],
-        ['SK하이닉스',86,'신고가 −5.1%','₩3,980억'],
-      ]
-    },
-    us:{
-      label:'미장',
-      leaders:[
-        ['NVDA',98,'신고가 −0.8%','$12.4B'],
-        ['AVGO',93,'신고가 −2.1%','$6.8B'],
-        ['CRWD',90,'신고가 돌파','$4.2B'],
-        ['NFLX',85,'신고가 −3.0%','$3.5B'],
-      ]
-    }
-  };
-  let curMarket='kr';
-  function renderMarket(mkt){
-    curMarket=mkt;
-    const d=mktData[mkt];
-    document.getElementById('mktLabelLead').textContent=d.label;
-    document.getElementById('leadList').innerHTML=d.leaders.map(l=>
-      `<div class="lead"><div class="l"><div class="sym">${l[0]} `+
-      `<span class="rs ${l[1]>=70?'hi':(l[1]>=50?'mid':'lo')}" style="margin-left:4px">RS ${l[1]}</span></div>`+
-      `<div class="sub">${l[2]}</div></div>`+
-      `<div class="r"><div class="vol">${l[3]}</div><div class="vollbl">거래대금</div></div></div>`).join('');
-    document.getElementById('cardKR').classList.toggle('sel',mkt==='kr');
-    document.getElementById('cardUS').classList.toggle('sel',mkt==='us');
-    if(document.getElementById('rankSheet').classList.contains('open')) renderRank();
-  }
-  // KST 기준 자동 선택: 05:30~15:30 → 국장(KR), 그 외 → 미장(US)
-  function autoMarket(){
-    const now=new Date();
-    // 한국시간(UTC+9) 분 단위
-    const kstMin=(now.getUTCHours()*60+now.getUTCMinutes()+9*60)%1440;
-    const open=5*60+30, close=15*60+30; // 05:30 ~ 15:30
-    return (kstMin>=open && kstMin<close)?'kr':'us';
-  }
-  let userPicked=false;
-  renderMarket(autoMarket());
+// ── 시그널 피드 ──
+function renderSignals(){
+  const sigs=STATE.signals_recent||[];
+  document.getElementById('sigList').innerHTML=sigs.length?sigs.map(sigRow).join(''):emptyMsg('시그널 없음');
+}
+
+// ── 이력 ──
+function renderHistory(){ applyHist(); renderTrades(); }
+function applyHist(){
+  const agg=((STATE.history||{}).agg||{})[curM]||{}, d=agg[curP]||{pl_krw:0,win_rate:0,avg_rr:0,count:0};
+  const pl=document.getElementById('sumPL'); pl.textContent=signWon(d.pl_krw); pl.className='big '+cls(d.pl_krw);
+  document.getElementById('sumWin').textContent=Math.round(d.win_rate||0)+'%';
+  document.getElementById('sumRR').textContent=(d.avg_rr||0).toFixed(1);
+  document.getElementById('sumN').textContent=(d.count||0)+'건';
+  document.getElementById('sumScope').textContent='· '+({all:'전체',kr:'KR',us:'US'}[curM])+' · '+({'1m':'1개월','3m':'3개월',ytd:'YTD',all:'전체'}[curP]);
+}
+function renderTrades(){
+  let ts=((STATE.history||{}).trades)||[];
+  if(curM!=='all') ts=ts.filter(t=>(t.market||'').toLowerCase()===curM);
+  document.getElementById('tradeList').innerHTML=ts.length?ts.map(t=>{
+    const loss=t.is_loss||(t.pl_pct||0)<0, c=loss?'red':'green';
+    return `<div class="trade ${loss?'loss':''}"><div class="accent"></div>
+      <div class="hd"><div class="symwrap"><span class="sym">${t.market==='KR'?esc(t.name||t.sym):esc(t.sym)}</span><span class="flag">${esc(t.market)}</span></div>
+        <div><div class="pl ${c}">${signPct(t.pl_pct)}</div><div class="plr ${c}">${signWon(t.pl_krw)} · ${(t.rr>=0?'+':'')}${(t.rr||0).toFixed(1)}R</div></div></div>
+      <div class="meta"><span class="m">진입 <b>${px(t.entry,t.market)}</b></span><span class="m">청산 <b>${px(t.exit,t.market)}</b></span><span class="m">보유 <b>${t.hold_days||0}일</b></span><span class="m">${(t.exit_date||'').slice(5).replace('-','/')}</span></div></div>`;
+  }).join(''):emptyMsg('해당 기간 매매 없음');
+}
+document.querySelectorAll('#segMarket .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#segMarket .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curM=c.dataset.m;applyHist();renderTrades();}));
+document.querySelectorAll('#segPeriod .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#segPeriod .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curP=c.dataset.p;applyHist();}));
+
+// ── 마켓 카드 ──
+function regCard(id,flag,name,d){
+  const mkt=id==='cardKR'?'kr':'us';
+  if(!d) return `<div class="regcard" id="${id}" data-mkt="${mkt}"><div class="top"><span class="mname">${flag} ${name}</span></div><div class="rows"><div class="regrow"><span class="lbl">데이터 없음</span></div></div></div>`;
+  const bull=d.regime==='강세', dd=Math.max(0,Math.min(6,d.dd_count||0));
+  const ddbar=Array.from({length:6},(_,i)=>`<i class="${i<dd?'hit':''}"></i>`).join('');
+  const idx=d.idx_vs_50ma_pct||0, idxUp=idx>=0;
+  return `<div class="regcard ${bull?'bull':'bear'}" id="${id}" data-mkt="${mkt}">
+    <div class="top"><span class="mtitle"><span class="mname">${flag} ${name}</span><span class="pick">선택됨</span></span><span class="verdict">${bull?'강세 · 공격':'약세 · 방어'}</span></div>
+    <div class="rows">
+      <div class="regrow"><span class="lbl">분산일 (DD, 25일)</span><span class="ddbar">${ddbar}</span></div>
+      <div class="regrow"><span class="lbl">마지막 추격일 (FTD)</span><span class="val ${d.ftd?'green':''}" ${d.ftd?'':'style="color:var(--txt-faint)"'}>${d.ftd?(d.ftd.slice(5).replace('-','/')+' 확인'):'미발생 · 대기'}</span></div>
+      <div class="regrow"><span class="lbl">지수 vs 50일선</span><span class="val ${idxUp?'green':'red'}">${signPct(idx)} ${idxUp?'위 ▲':'아래 ▼'}</span></div>
+    </div></div>`;
+}
+function renderMarketCards(){
+  const m=STATE.markets||{};
+  document.getElementById('cardKR').outerHTML=regCard('cardKR','🇰🇷','KOSPI',m.kr);
+  document.getElementById('cardUS').outerHTML=regCard('cardUS','🇺🇸','S&amp;P 500',m.us);
   document.getElementById('cardKR').addEventListener('click',()=>{userPicked=true;renderMarket('kr');});
   document.getElementById('cardUS').addEventListener('click',()=>{userPicked=true;renderMarket('us');});
-  // 사용자가 직접 고르지 않았다면 1분마다 마감시간 체크해 자동 전환
-  setInterval(()=>{ if(!userPicked) renderMarket(autoMarket()); },60000);
+}
 
-  // ── 전체 순위 시트 ──
-  // [종목, 섹터, RS, 거래대금문자열, 거래대금정렬값]
-  const ranking={
-    kr:[
-      ['한미반도체','반도체',97,'₩8,420억',8420],['에코프로비엠','2차전지',92,'₩6,150억',6150],
-      ['한화에어로','방산',89,'₩4,730억',4730],['SK하이닉스','반도체',86,'₩3,980억',3980],
-      ['삼성전자','반도체',71,'₩3,710억',3710],['포스코퓨처엠','2차전지',68,'₩3,240억',3240],
-      ['LG에너지솔루션','2차전지',74,'₩2,980억',2980],['현대로템','방산',83,'₩2,610억',2610],
-      ['셀트리온','바이오',64,'₩2,330억',2330],['NAVER','인터넷',55,'₩2,180억',2180],
-      ['카카오','인터넷',49,'₩1,990억',1990],['두산에너빌리티','방산',79,'₩1,870억',1870],
-      ['삼성SDI','2차전지',62,'₩1,720억',1720],['기아','자동차',58,'₩1,650억',1650],
-      ['HLB','바이오',70,'₩1,540억',1540],['리노공업','반도체',81,'₩1,420억',1420],
-      ['에코프로','2차전지',66,'₩1,360억',1360],['알테오젠','바이오',77,'₩1,280억',1280],
-      ['LIG넥스원','방산',84,'₩1,190억',1190],['DB하이텍','반도체',60,'₩1,050억',1050],
-      ['JYP Ent.','엔터',73,'₩990억',990],['하이브','엔터',69,'₩960억',960],
-      ['엘앤에프','2차전지',57,'₩930억',930],['SK이노베이션','2차전지',52,'₩900억',900],
-      ['삼성바이오로직스','바이오',75,'₩870억',870],['유한양행','바이오',71,'₩840억',840],
-      ['현대차','자동차',61,'₩810억',810],['현대모비스','자동차',56,'₩780억',780],
-      ['포스코홀딩스','철강',48,'₩750억',750],['고려아연','철강',64,'₩720억',720],
-      ['카카오뱅크','금융',45,'₩690억',690],['KB금융','금융',67,'₩660억',660],
-      ['신한지주','금융',62,'₩630억',630],['크래프톤','게임',76,'₩600억',600],
-      ['엔씨소프트','게임',43,'₩580억',580],['넷마블','게임',51,'₩560억',560],
-      ['두산밥캣','방산',70,'₩540억',540],['한화시스템','방산',82,'₩520억',520],
-      ['이수페타시스','반도체',85,'₩500억',500],['주성엔지니어링','반도체',78,'₩480억',480],
-      ['솔브레인','반도체',66,'₩460억',460],['SOOP','인터넷',72,'₩440억',440],
-      ['카카오페이','금융',47,'₩420억',420],['펄어비스','게임',54,'₩400억',400],
-      ['천보','2차전지',59,'₩385억',385],['덕산네오룩스','반도체',68,'₩370억',370],
-      ['에스티팜','바이오',74,'₩355억',355],['클래시스','바이오',80,'₩340억',340],
-      ['파크시스템스','반도체',79,'₩325억',325],['HD현대중공업','방산',81,'₩310억',310],
-    ],
-    us:[
-      ['NVDA','반도체',98,'$12.4B',12400],['AVGO','반도체',93,'$6.8B',6800],
-      ['CRWD','소프트웨어',90,'$4.2B',4200],['NFLX','소프트웨어',85,'$3.5B',3500],
-      ['META','소셜미디어',82,'$3.2B',3200],['MSFT','소프트웨어',76,'$3.0B',3000],
-      ['AAPL','하드웨어',69,'$2.9B',2900],['AMD','반도체',88,'$2.7B',2700],
-      ['TSLA','자동차',54,'$2.5B',2500],['PLTR','소프트웨어',91,'$2.3B',2300],
-      ['GOOGL','소셜미디어',72,'$2.1B',2100],['AMZN','소비재',67,'$1.9B',1900],
-      ['SMCI','반도체',74,'$1.8B',1800],['PANW','소프트웨어',87,'$1.6B',1600],
-      ['MU','반도체',80,'$1.5B',1500],['SNOW','소프트웨어',63,'$1.4B',1400],
-      ['COIN','금융',79,'$1.3B',1300],['XOM','에너지',71,'$1.2B',1200],
-      ['LLY','바이오',83,'$1.1B',1100],['NOW','소프트웨어',78,'$1.0B',1000],
-      ['ORCL','소프트웨어',70,'$980M',980],['ADBE','소프트웨어',58,'$950M',950],
-      ['QCOM','반도체',75,'$920M',920],['INTC','반도체',41,'$890M',890],
-      ['TSM','반도체',86,'$860M',860],['ASML','반도체',81,'$830M',830],
-      ['MRVL','반도체',77,'$800M',800],['ARM','반도체',89,'$770M',770],
-      ['UBER','소프트웨어',72,'$740M',740],['SHOP','소프트웨어',84,'$710M',710],
-      ['ABNB','소비재',55,'$680M',680],['DASH','소비재',79,'$650M',650],
-      ['NET','소프트웨어',82,'$620M',620],['DDOG','소프트웨어',61,'$600M',600],
-      ['MDB','소프트웨어',57,'$580M',580],['ANET','반도체',73,'$560M',560],
-      ['VRT','산업재',88,'$540M',540],['CEG','에너지',85,'$520M',520],
-      ['VST','에너지',83,'$500M',500],['NEE','에너지',62,'$480M',480],
-      ['JPM','금융',68,'$460M',460],['GS','금융',71,'$440M',440],
-      ['V','금융',66,'$420M',420],['MA','금융',64,'$400M',400],
-      ['COST','소비재',76,'$385M',385],['WMT','소비재',69,'$370M',370],
-      ['ISRG','바이오',80,'$355M',355],['REGN','바이오',74,'$340M',340],
-      ['CRM','소프트웨어',73,'$325M',325],['FTNT','소프트웨어',75,'$310M',310],
-    ]
-  };
-  let sheetKey='vol';
-  function renderRank(){
-    const arr=ranking[curMarket].slice();
-    if(sheetKey==='vol') arr.sort((a,b)=>b[4]-a[4]); else arr.sort((a,b)=>b[2]-a[2]);
-    document.getElementById('sheetTitle').textContent='전체 순위 · '+mktData[curMarket].label;
-    document.getElementById('rankList').innerHTML=arr.slice(0,50).map((r,i)=>
-      `<div class="rk"><span class="no">${i+1}</span>`+
-      `<div class="info"><div class="nm">${r[0]}</div></div>`+
-      (sheetKey==='vol'
-        ? `<div class="metric">${r[3]}<div class="sub" style="text-align:right">RS ${r[2]}</div></div>`
-        : `<div class="metric rs">RS ${r[2]}<div class="sub" style="text-align:right">${r[3]}</div></div>`)+
-      `</div>`).join('');
+// ── 거래대금 리더 + 순위 시트 ──
+function renderMarket(mkt){
+  curMarket=mkt;
+  const rk=(STATE.ranking||{})[mkt]||{}, leaders=(rk.by_value||[]).slice(0,4);
+  document.getElementById('mktLabelLead').textContent=mkt==='kr'?'국장':'미장';
+  const isKR=mkt==='kr';
+  document.getElementById('leadList').innerHTML=leaders.length?leaders.map(l=>{
+    const main=isKR?esc(l.name||l.sym):esc(l.sym), sub=isKR?esc(l.sym):esc(l.name||'');
+    return `<div class="lead"><div class="l"><div class="sym">${main} <span class="rs ${rsCls(l.rs)}" style="margin-left:4px">RS ${l.rs}</span></div><div class="sub">${sub}</div></div>
+     <div class="r"><div class="vol">${fmtTV(l.value,mkt)}</div><div class="vollbl">거래대금</div></div></div>`;
+  }).join(''):emptyMsg('데이터 없음');
+  const ck=document.getElementById('cardKR'),cu=document.getElementById('cardUS');
+  if(ck)ck.classList.toggle('sel',mkt==='kr'); if(cu)cu.classList.toggle('sel',mkt==='us');
+  if(document.getElementById('rankSheet').classList.contains('open')) renderRank();
+}
+function autoMarket(){const now=new Date(),k=(now.getUTCHours()*60+now.getUTCMinutes()+540)%1440;return (k>=330&&k<930)?'kr':'us';}
+function renderRank(){
+  const rk=(STATE.ranking||{})[curMarket]||{}, arr=(sheetKey==='vol'?(rk.by_value||[]):(rk.by_rs||[])).slice(0,50);
+  document.getElementById('sheetTitle').textContent='전체 순위 · '+(curMarket==='kr'?'국장':'미장');
+  const isKR=curMarket==='kr';
+  document.getElementById('rankList').innerHTML=arr.length?arr.map((r,i)=>{
+    const main=isKR?esc(r.name||r.sym):esc(r.sym), sub=isKR?esc(r.sym):esc(r.name||'');
+    return `<div class="rk"><span class="no">${i+1}</span><div class="info"><div class="nm">${main}</div><div class="sub">${sub}</div></div>`+
+    (sheetKey==='vol'?`<div class="metric">${fmtTV(r.value,curMarket)}<div class="sub" style="text-align:right">RS ${r.rs}</div></div>`
+      :`<div class="metric rs">RS ${r.rs}<div class="sub" style="text-align:right">${fmtTV(r.value,curMarket)}</div></div>`)+`</div>`;
+  }).join(''):emptyMsg('데이터 없음');
+}
+document.getElementById('moreBtn').addEventListener('click',()=>{renderRank();document.getElementById('rankSheet').classList.add('open');});
+document.getElementById('sheetClose').addEventListener('click',()=>document.getElementById('rankSheet').classList.remove('open'));
+document.getElementById('rankSheet').addEventListener('click',e=>{if(e.target.id==='rankSheet')e.currentTarget.classList.remove('open');});
+document.getElementById('tabVol').addEventListener('click',()=>{sheetKey='vol';document.getElementById('tabVol').classList.add('on');document.getElementById('tabRs').classList.remove('on');renderRank();});
+document.getElementById('tabRs').addEventListener('click',()=>{sheetKey='rs';document.getElementById('tabRs').classList.add('on');document.getElementById('tabVol').classList.remove('on');renderRank();});
+
+// ── 시작 ──
+curMarket=autoMarket();
+setInterval(()=>{if(!userPicked){const m=autoMarket();if(m!==curMarket)renderMarket(m);}},60000);
+// ── 알림 (앱 열려있을 때) ──
+let lastSigTs=localStorage.getItem('cm_lastsig')||'';
+function checkNewSignals(){
+  const sigs=(STATE&&STATE.signals_recent)||[];
+  if(!sigs.length) return;
+  const newest=sigs[0].ts||'';
+  if(lastSigTs && newest>lastSigTs && ('Notification' in window) && Notification.permission==='granted'){
+    const s=sigs[0], label=(SIG_META[s.type]||[,,,s.type])[3];
+    try{ new Notification('방치형 돈복사',{body:`${label} · ${s.name||s.sym}`,tag:newest}); }catch(e){}
   }
-  document.getElementById('moreBtn').addEventListener('click',()=>{
-    renderRank();document.getElementById('rankSheet').classList.add('open');
-  });
-  document.getElementById('sheetClose').addEventListener('click',()=>document.getElementById('rankSheet').classList.remove('open'));
-  document.getElementById('rankSheet').addEventListener('click',e=>{
-    if(e.target.id==='rankSheet') e.currentTarget.classList.remove('open');
-  });
-  document.getElementById('tabVol').addEventListener('click',()=>{
-    sheetKey='vol';document.getElementById('tabVol').classList.add('on');
-    document.getElementById('tabRs').classList.remove('on');renderRank();
-  });
-  document.getElementById('tabRs').addEventListener('click',()=>{
-    sheetKey='rs';document.getElementById('tabRs').classList.add('on');
-    document.getElementById('tabVol').classList.remove('on');renderRank();
-  });
+  if(newest){ lastSigTs=newest; localStorage.setItem('cm_lastsig',newest); }
+}
+function askNotif(){ if(('Notification' in window) && Notification.permission==='default'){ Notification.requestPermission().catch(()=>{}); } }
+document.body.addEventListener('click',askNotif,{once:true});
+
+load();
+setInterval(load,REFRESH_MS);
 </script>
 <script>
-  // PWA 서비스워커 등록
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW 등록 실패:', err));
-    });
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW 등록 실패:',e)));
   }
 </script>
 </body>
