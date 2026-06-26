@@ -42,7 +42,7 @@
     background:radial-gradient(900px 500px at 80% -10%, var(--glow1), transparent 60%),
       radial-gradient(700px 400px at -10% 10%, var(--glow2), transparent 55%),var(--bg);}
   .topbar{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
-    background:var(--bar-bg);border-bottom:1px solid var(--line);padding:11px 16px 10px;}
+    background:var(--bar-bg);border-bottom:1px solid var(--line);padding:calc(11px + env(safe-area-inset-top)) 16px 10px;}
   .toprow{display:flex;align-items:center;gap:12px;}
   .themebtn{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;
     width:32px;height:32px;display:grid;place-items:center;cursor:pointer;color:var(--txt-dim);
@@ -245,7 +245,7 @@
   .rk .nm{font-family:'JetBrains Mono';font-weight:700;font-size:14px;}
   .rk .sub{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);margin-top:2px;}
   .rk .metric{font-family:'JetBrains Mono';font-weight:800;font-size:13px;text-align:right;}
-  .rk .metric.rs{color:var(--green);}
+  .rk .metric.rs{color:var(--green);border:none;background:none;padding:0;border-radius:0;}
   .ownb{font-family:'JetBrains Mono';font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;margin-left:4px;vertical-align:middle;}
   .ownb.hold{color:var(--green);background:var(--green-bg);}
   .ownb.watch{color:var(--amber);background:rgba(245,180,80,.16);}
