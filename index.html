@@ -118,6 +118,7 @@
     border:1px solid var(--line);border-radius:6px;padding:1px 7px;}
   .witem{background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;
     padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+  .witem .l{min-width:0;}
   .witem .l .symrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
   .witem .l .sym{font-family:'JetBrains Mono';font-weight:700;font-size:15px;}
   .rs{font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:.3px;
@@ -125,7 +126,9 @@
   .rs.hi{color:var(--green);border-color:rgba(31,209,122,.4);background:var(--green-bg);}
   .rs.mid{color:var(--amber);border-color:rgba(255,176,32,.4);background:var(--amber-bg);}
   .rs.lo{color:var(--txt-faint);border-color:var(--line);background:var(--panel-2);}
-  .witem .l .pv{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);margin-top:3px;}
+  .witem .l .pv{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);margin-top:3px;display:flex;white-space:nowrap;overflow:hidden;}
+  .witem .l .pv .pvname{overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
+  .witem .l .pv .pvfix{flex-shrink:0;}
   .witem .r{text-align:right;}
   .witem .r .px{font-family:'JetBrains Mono';font-weight:700;font-size:14px;}
   .witem .r .d{font-family:'JetBrains Mono';font-size:11px;margin-top:2px;}
@@ -496,7 +499,7 @@ function renderWatch(){
       const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub=isKR?esc(w.sym):esc(w.name||'');
       const volTxt=(key==='breakout'&&w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((key==='breakout'&&w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:(key==='breakout'?' · 돌파':''));
       return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
-        <div class="pv">${sub?`${sub} · `:''}${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</div></div>
+        <div class="pv">${sub?`<span class="pvname">${sub}</span><span class="pvfix"> · ${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</span>`:`<span class="pvfix">${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</span>`}</div></div>
         <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>`;
     }).join(''):`<div class="witem" style="opacity:.45"><div class="l"><div class="pv">없음</div></div></div>`;
     html+='</div>';
