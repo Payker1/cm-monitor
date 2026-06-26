@@ -94,6 +94,10 @@
   .pos.loss .accent{background:var(--red);}
   .pos .hd{display:flex;justify-content:space-between;align-items:flex-start;}
   .pos .sym{font-family:'JetBrains Mono';font-weight:800;font-size:17px;letter-spacing:.5px;}
+  .subnm{font-size:10px;color:var(--txt-faint);font-weight:500;margin-top:1px;}
+  .symbox{display:flex;flex-direction:column;gap:1px;}
+  .symwrap2{display:flex;flex-direction:column;gap:2px;}
+  .symline{display:flex;align-items:center;gap:7px;}
   .pos .plwrap{text-align:right;}
   .pos .pl{font-family:'JetBrains Mono';font-weight:800;font-size:16px;}
   .pos .plamt{font-family:'JetBrains Mono';font-weight:600;font-size:12px;margin-top:2px;color:var(--txt-dim);}
@@ -391,6 +395,8 @@ const fmtVal=v=>typeof v==='number'?v.toLocaleString('en-US'):(v||'');
 function fmtTV(v,mkt){ if(typeof v!=='number') return v||''; if(mkt==='kr') return Math.round(v/1e8).toLocaleString('en-US')+'억'; return (v/1e6).toLocaleString('en-US',{maximumFractionDigits:1})+'M$'; }
 const fm=(arr,f)=>f==='all'?(arr||[]):(arr||[]).filter(x=>(x.market||'')===f);
 function ownBadge(sym){ if((STATE.positions||[]).some(p=>p.sym===sym)) return ' <span class="ownb hold">보유</span>'; if((STATE.watchlist||[]).some(w=>w.sym===sym)) return ' <span class="ownb watch">관심</span>'; return ''; }
+const mainNm=o=>o.market==='KR'?esc(o.name||o.sym):esc(o.sym);
+const subNm=o=>o.market==='KR'?esc(o.sym):esc(o.name||'');
 
 // ── 데이터 로드 ──
 async function load(){
@@ -469,7 +475,7 @@ function renderPositions(){
   document.getElementById('posList').innerHTML=ps.length?ps.map(p=>{
     const loss=p.is_loss||(p.pl_pct||0)<0, c=loss?'red':'green', danger=(p.stop_dist_pct!=null&&Math.abs(p.stop_dist_pct)<2);
     return `<div class="pos ${loss?'loss':''} ${danger?'danger':''}"><div class="accent"></div>
-      <div class="hd"><span class="sym">${esc(p.sym)}</span><div class="plwrap"><div class="pl ${c}">${signPct(p.pl_pct)}</div><div class="plamt ${c}">${signWon(p.pl_krw)}</div></div></div>
+      <div class="hd"><div class="symbox"><span class="sym">${mainNm(p)}</span>${subNm(p)?`<span class="subnm">${subNm(p)}</span>`:''}</div><div class="plwrap"><div class="pl ${c}">${signPct(p.pl_pct)}</div><div class="plamt ${c}">${signWon(p.pl_krw)}</div></div></div>
       <div class="meta"><span class="m">진입 <b>${px(p.entry,p.market)}</b></span><span class="m">현재 <b>${px(p.current,p.market)}</b></span><span class="m">보유 <b>${p.hold_days||0}일</b></span></div>
       <div class="stopline"><span class="sl">${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div>`;
   }).join(''):emptyMsg('보유 종목 없음');
@@ -485,7 +491,7 @@ function renderWatch(){
     html+=`<div class="wgroup"><div class="wghead"><span class="tag ${color}" ${color?'':'style="color:var(--txt-dim)"'}>${label}</span><span class="cnt">${items.length}</span></div>`;
     html+=items.length?items.map(w=>{
       const up=(w.change_pct||0)>=0, dCls=key==='basing'?'':(up?'green':'amber'), dTxt=key==='basing'?'관찰':signPct(w.change_pct)+(up?' ▲':'');
-      const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub=isKR?esc(w.sym):'';
+      const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub=isKR?esc(w.sym):esc(w.name||'');
       const volTxt=(key==='breakout'&&w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((key==='breakout'&&w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:(key==='breakout'?' · 돌파':''));
       return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
         <div class="pv">${sub?`${sub} · `:''}${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</div></div>
@@ -519,7 +525,7 @@ function renderTrades(){
   document.getElementById('tradeList').innerHTML=ts.length?ts.map(t=>{
     const loss=t.is_loss||(t.pl_pct||0)<0, c=loss?'red':'green';
     return `<div class="trade ${loss?'loss':''}"><div class="accent"></div>
-      <div class="hd"><div class="symwrap"><span class="sym">${t.market==='KR'?esc(t.name||t.sym):esc(t.sym)}</span><span class="flag">${esc(t.market)}</span></div>
+      <div class="hd"><div class="symwrap2"><div class="symline"><span class="sym">${mainNm(t)}</span><span class="flag">${esc(t.market)}</span></div>${subNm(t)?`<span class="subnm">${subNm(t)}</span>`:''}</div>
         <div><div class="pl ${c}">${signPct(t.pl_pct)}</div><div class="plr ${c}">${signWon(t.pl_krw)} · ${(t.rr>=0?'+':'')}${(t.rr||0).toFixed(1)}R</div></div></div>
       <div class="meta"><span class="m">진입 <b>${px(t.entry,t.market)}</b></span><span class="m">청산 <b>${px(t.exit,t.market)}</b></span><span class="m">보유 <b>${t.hold_days||0}일</b></span><span class="m">${(t.exit_date||'').slice(5).replace('-','/')}</span></div></div>`;
   }).join(''):emptyMsg('해당 기간 매매 없음');
