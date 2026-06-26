@@ -486,7 +486,7 @@ function renderWatch(){
     html+=items.length?items.map(w=>{
       const up=(w.change_pct||0)>=0, dCls=key==='basing'?'':(up?'green':'amber'), dTxt=key==='basing'?'관찰':signPct(w.change_pct)+(up?' ▲':'');
       const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub=isKR?esc(w.sym):'';
-      const volTxt=(key==='breakout'&&w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:(key==='breakout'?' · 돌파':'');
+      const volTxt=(key==='breakout'&&w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((key==='breakout'&&w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:(key==='breakout'?' · 돌파':''));
       return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
         <div class="pv">${sub?`${sub} · `:''}${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</div></div>
         <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>`;
@@ -600,7 +600,7 @@ function checkNewSignals(){
   const newest=sigs[0].ts||'';
   if(lastSigTs && newest>lastSigTs && ('Notification' in window) && Notification.permission==='granted' && ['buy','sell','bo'].includes(sigs[0].type)){
     const s=sigs[0], label=(SIG_META[s.type]||[,,,s.type])[3];
-    try{ new Notification('방치형 돈복사',{body:`${label} · ${s.market==='KR'?(s.name||s.sym):s.sym}`,tag:newest}); }catch(e){}
+    try{ new Notification(`${label} · ${s.market==='KR'?(s.name||s.sym):s.sym}`,{tag:newest}); }catch(e){}
   }
   if(newest){ lastSigTs=newest; localStorage.setItem('cm_lastsig',newest); }
 }
