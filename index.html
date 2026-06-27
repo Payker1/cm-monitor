@@ -18,7 +18,7 @@
     --green:#1fd17a;--green-bg:rgba(31,209,122,.13);--red:#ff4d5e;--red-bg:rgba(255,77,94,.13);
     --amber:#ffb020;--amber-bg:rgba(255,176,32,.13);--blue:#3d8bff;--blue-bg:rgba(61,139,255,.13);
     --purple:#b08aff;--purple-bg:rgba(176,138,255,.14);--accent:#1fd17a;
-    --bar-bg:#0b1416;--num:#ffffff;
+    --bar-bg:rgba(11,20,22,0.90);--num:#ffffff;
     --glow1:rgba(31,209,122,0.08);--glow2:rgba(61,139,255,0.05);
   }
   body.light{
@@ -27,7 +27,7 @@
     --green:#12925a;--green-bg:rgba(18,146,90,.10);--red:#d12b3a;--red-bg:rgba(209,43,58,.10);
     --amber:#b3760e;--amber-bg:rgba(179,118,14,.12);--blue:#2563c9;--blue-bg:rgba(37,99,201,.10);
     --purple:#7a4fc0;--purple-bg:rgba(122,79,192,.11);--accent:#12925a;
-    --bar-bg:#f5f6f8;--num:#0f1115;
+    --bar-bg:rgba(255,255,255,0.88);--num:#0f1115;
     --glow1:rgba(18,146,90,0.05);--glow2:rgba(37,99,201,0.04);
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -129,7 +129,7 @@
   .witem .l .pv{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);margin-top:3px;display:flex;white-space:nowrap;overflow:hidden;}
   .witem .l .pv .pvname{overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
   .witem .l .pv .pvfix{flex-shrink:0;}
-  .witem .r{text-align:right;flex:none;white-space:nowrap;}
+  .witem .r{text-align:right;}
   .witem .r .px{font-family:'JetBrains Mono';font-weight:700;font-size:14px;}
   .witem .r .d{font-family:'JetBrains Mono';font-size:11px;margin-top:2px;}
   .sig{display:flex;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line-soft);}
@@ -402,8 +402,6 @@ const fm=(arr,f)=>f==='all'?(arr||[]):(arr||[]).filter(x=>(x.market||'')===f);
 function ownBadge(sym){ if((STATE.positions||[]).some(p=>p.sym===sym)) return ' <span class="ownb hold">보유</span>'; if((STATE.watchlist||[]).some(w=>w.sym===sym)) return ' <span class="ownb watch">관심</span>'; return ''; }
 const mainNm=o=>o.market==='KR'?esc(o.name||o.sym):esc(o.sym);
 const subNm=o=>o.market==='KR'?esc(o.sym):esc(o.name||'');
-// 피벗 돌파(bo)는 종목별로 1건만 노출 (signals_recent는 최신순 → 가장 최근 1건 유지). 다른 타입은 그대로.
-function dedupeBO(sigs){const seen=new Set();return (sigs||[]).filter(s=>{if(s.type!=='bo')return true;const k=s.sym||s.name;if(seen.has(k))return false;seen.add(k);return true;});}
 
 // ── 데이터 로드 ──
 async function load(){
@@ -453,7 +451,7 @@ function renderHome(){
      <div class="stat"><div class="k">피벗 돌파</div><div class="v green">${(STATE.watchlist||[]).filter(w=>w.group==='breakout').length}</div><div class="sub">브레이크아웃 종목</div></div>
      <div class="stat"><div class="k">승률 (30일)</div><div class="v green">${Math.round(s.win_rate_30d||0)}%</div><div class="sub">${s.wins_30d||0}승 ${s.losses_30d||0}패</div></div>
      <div class="stat"><div class="k">평균 손익비</div><div class="v">${(s.avg_rr||0).toFixed(1)}R</div><div class="sub">평균 수익/손실</div></div>`;
-  const sigs=dedupeBO(STATE.signals_recent||[]).slice(0,3);
+  const sigs=(STATE.signals_recent||[]).slice(0,3);
   document.getElementById('homeSignals').innerHTML=sigs.length?sigs.map(sigRow).join(''):emptyMsg('시그널 없음');
   const eb=document.getElementById('eyeBtn'); if(eb) eb.onclick=()=>{hideBal=!hideBal;localStorage.setItem('cm_hidebal',hideBal?'1':'0');renderHome();};
 }
@@ -494,7 +492,9 @@ function renderWatch(){
   if(!ws.length){document.getElementById('watchList').innerHTML=emptyMsg('관심종목 없음');return;}
   let html='';
   groups.forEach(([key,label,color])=>{
-    const items=ws.filter(w=>w.group===key);
+    let items=ws.filter(w=>w.group===key);
+    if(key==='breakout'){ items=items.slice().sort((a,b)=>((b.vol_ratio??b.est_vol??0)-(a.vol_ratio??a.est_vol??0))); }
+    else if(key==='pivot_near'){ items=items.slice().sort((a,b)=>{ const da=(a.pivot&&a.price)?Math.abs(a.price-a.pivot)/a.pivot:Infinity, db=(b.pivot&&b.price)?Math.abs(b.price-b.pivot)/b.pivot:Infinity; return da-db; }); }
     html+=`<div class="wgroup"><div class="wghead"><span class="tag ${color}" ${color?'':'style="color:var(--txt-dim)"'}>${label}</span><span class="cnt">${items.length}</span></div>`;
     html+=items.length?items.map(w=>{
       const up=(w.change_pct||0)>=0, dCls=key==='basing'?'':(up?'green':'amber'), dTxt=key==='basing'?'관찰':signPct(w.change_pct)+(up?' ▲':'');
@@ -512,7 +512,7 @@ function renderWatch(){
 // ── 시그널 피드 ──
 function renderSignals(){
   const cutoff=Date.now()-7*86400000;
-  const sigs=dedupeBO(fm(STATE.signals_recent,sigF).filter(s=>{const t=s.ts?Date.parse(s.ts):0; return !t||t>=cutoff;}));
+  const sigs=fm(STATE.signals_recent,sigF).filter(s=>{const t=s.ts?Date.parse(s.ts):0; return !t||t>=cutoff;});
   document.getElementById('sigList').innerHTML=sigs.length?sigs.map(sigRow).join(''):emptyMsg('최근 7일 시그널 없음');
 }
 
@@ -607,34 +607,13 @@ curMarket=autoMarket();
 setInterval(()=>{if(!userPicked){const m=autoMarket();if(m!==curMarket)renderMarket(m);}},60000);
 // ── 알림 (앱 열려있을 때) ──
 let lastSigTs=localStorage.getItem('cm_lastsig')||'';
-let boNotified=new Set();
-try{ boNotified=new Set(JSON.parse(localStorage.getItem('cm_bonotified')||'[]')); }catch(e){}
-const saveBoNotified=()=>{ try{ localStorage.setItem('cm_bonotified',JSON.stringify([...boNotified])); }catch(e){} };
 function checkNewSignals(){
   const sigs=(STATE&&STATE.signals_recent)||[];
-  // 관심종목에서 빠진 종목은 알림 기록에서 제거 → 재진입 시 다시 1회 알림 허용
-  const watchSyms=new Set(((STATE&&STATE.watchlist)||[]).map(w=>w.sym));
-  let pruned=false;
-  boNotified.forEach(sym=>{ if(!watchSyms.has(sym)){ boNotified.delete(sym); pruned=true; } });
-  if(pruned) saveBoNotified();
   if(!sigs.length) return;
   const newest=sigs[0].ts||'';
-  if(!lastSigTs){
-    // 첫 로드: 이미 떠 있는 피벗 돌파는 알림 기록에만 등록(앱 켤 때 무더기 알림 방지)
-    sigs.forEach(s=>{ if(s.type==='bo'){ boNotified.add(s.sym||s.name); } });
-    saveBoNotified();
-  } else if(('Notification' in window) && Notification.permission==='granted'){
-    // 직전 확인 이후 새로 들어온 시그널만, 오래된 것부터 순서대로
-    const fresh=sigs.filter(s=>s.ts&&s.ts>lastSigTs&&['buy','sell','bo'].includes(s.type)).reverse();
-    fresh.forEach(s=>{
-      if(s.type==='bo'){
-        const k=s.sym||s.name;
-        if(boNotified.has(k)) return;        // 피벗 돌파는 종목당 1회만
-        boNotified.add(k); saveBoNotified();
-      }
-      const label=(SIG_META[s.type]||[,,,s.type])[3];
-      try{ new Notification(`${label} · ${s.market==='KR'?(s.name||s.sym):s.sym}`,{tag:(s.ts||'')+(s.sym||'')}); }catch(e){}
-    });
+  if(lastSigTs && newest>lastSigTs && ('Notification' in window) && Notification.permission==='granted' && ['buy','sell'].includes(sigs[0].type)){
+    const s=sigs[0], label=(SIG_META[s.type]||[,,,s.type])[3];
+    try{ new Notification(`${label} · ${s.market==='KR'?(s.name||s.sym):s.sym}`,{tag:newest}); }catch(e){}
   }
   if(newest){ lastSigTs=newest; localStorage.setItem('cm_lastsig',newest); }
 }
