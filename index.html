@@ -18,7 +18,7 @@
     --green:#1fd17a;--green-bg:rgba(31,209,122,.13);--red:#ff4d5e;--red-bg:rgba(255,77,94,.13);
     --amber:#ffb020;--amber-bg:rgba(255,176,32,.13);--blue:#3d8bff;--blue-bg:rgba(61,139,255,.13);
     --purple:#b08aff;--purple-bg:rgba(176,138,255,.14);--accent:#1fd17a;
-    --bar-bg:rgba(11,20,22,0.90);--num:#ffffff;
+    --bar-bg:rgba(11,20,22,1);--num:#ffffff;
     --glow1:rgba(31,209,122,0.08);--glow2:rgba(61,139,255,0.05);
   }
   body.light{
@@ -27,7 +27,7 @@
     --green:#12925a;--green-bg:rgba(18,146,90,.10);--red:#d12b3a;--red-bg:rgba(209,43,58,.10);
     --amber:#b3760e;--amber-bg:rgba(179,118,14,.12);--blue:#2563c9;--blue-bg:rgba(37,99,201,.10);
     --purple:#7a4fc0;--purple-bg:rgba(122,79,192,.11);--accent:#12925a;
-    --bar-bg:rgba(255,255,255,0.88);--num:#0f1115;
+    --bar-bg:rgba(255,255,255,1);--num:#0f1115;
     --glow1:rgba(18,146,90,0.05);--glow2:rgba(37,99,201,0.04);
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -256,6 +256,8 @@
   .ownb{font-family:'JetBrains Mono';font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;margin-left:4px;vertical-align:middle;}
   .ownb.hold{color:var(--green);background:var(--green-bg);}
   .ownb.watch{color:var(--amber);background:rgba(245,180,80,.16);}
+  .cumret{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-dim);margin-top:4px;}
+  .newb{font-family:'JetBrains Mono';font-size:9px;font-weight:800;color:#fff;background:var(--blue,#3b82f6);padding:1px 5px;border-radius:5px;letter-spacing:.3px;}
   .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
     background:var(--bar-bg);backdrop-filter:blur(16px);border-top:1px solid var(--line);
     display:flex;padding:9px 6px calc(22px + env(safe-area-inset-bottom));z-index:50;}
@@ -446,7 +448,7 @@ function renderHome(){
   const a=STATE.account||{}, s=STATE.stats||{}, up=(a.day_change_krw||0)>=0;
   document.getElementById('homeHero').innerHTML=
     `<div class="hero"><div class="lbl">계좌 평가금액 <span id="eyeBtn" style="cursor:pointer;margin-left:4px;opacity:.65;font-size:13px">${hideBal?'🙈':'👁'}</span></div><div class="equity">${maskWon(a.equity_krw)}</div>
-     <div class="chg" style="color:var(--${up?'green':'red'})"><span class="pill" style="background:var(--${up?'green':'red'}-bg)">${up?'▲':'▼'} ${maskSignWon(a.day_change_krw)}</span><span>${signPct(a.day_change_pct)} 오늘</span></div>
+     <div class="chg" style="color:var(--${up?'green':'red'})"><span class="pill" style="background:var(--${up?'green':'red'}-bg)">${up?'▲':'▼'} ${maskSignWon(a.day_change_krw)}</span><span>${signPct(a.day_change_pct)} 오늘</span></div>${a.cum_return_pct!=null?`<div class="cumret">누적 수익률 <b style="color:var(--${a.cum_return_pct>=0?'green':'red'})">${signPct(a.cum_return_pct)}</b></div>`:''}
      ${spark(a.equity_series)}</div>`;
   document.getElementById('homeStats').innerHTML=
     `<div class="stat"><div class="k">오픈 포지션</div><div class="v">${s.open_positions||0}</div><div class="sub">종목 보유 중</div></div>
@@ -461,18 +463,43 @@ function renderHome(){
 // ── 시그널 행 ──
 const SIG_META={buy:['buy','BUY','green','매수 체결'],sell:['sell','SEL','red','매도 체결'],add:['watch','ADD','purple','관심종목 추가'],bo:['watch','BO','blue','피벗 돌파'],stop:['stop','STP','amber','손절선 조정'],alert:['alert','ALT','blue','시장 국면']};
 function sigRow(s){
-  const m=SIG_META[s.type]||['alert','·','blue',s.type], t=s.ts?s.ts.slice(11,19):'';
+  const m=SIG_META[s.type]||['alert','·','blue',s.type];
+  const t=s.ts?`${s.ts.slice(5,7)}.${s.ts.slice(8,10)} ${s.ts.slice(11,16)}`:'';
+  const nm=s.market==='KR'?esc(s.name||s.sym):esc(s.sym);
+  const J=a=>a.filter(Boolean).join(' · ');
+  // ALT(시장국면/스크리닝): 2줄 전용
+  if(s.type==='alert'){
+    return `<div class="sig"><div class="ic alert">ALT</div><div class="body">
+      <div class="l1"><span class="act blue">${esc(s.market||'')}${s.market?' · ':''}시장 국면${s.regime?` · ${esc(s.regime)}`:''}</span><span class="t">${t}</span></div>
+      <div class="l2">${esc(s.note||'')}</div></div></div>`;
+  }
   let l2;
   if(s.type==='buy'){
     const amt=s.amount!=null?s.amount:((s.price&&s.qty)?s.price*s.qty:null);
-    l2=`${esc(s.note||'피벗 돌파 진입')}${s.price!=null?` · 진입 <b>${s.price}</b>`:''}${amt!=null?` · 매수금액 <b>${Math.round(amt).toLocaleString('en-US')}원</b>`:''}`;
+    l2=J([
+      s.size_pct!=null?`포지션 ${s.size_pct}%`:null,
+      s.price!=null?`매수 <b>${s.price}</b>`:null,
+      s.qty!=null?`수량 <b>${(+s.qty).toLocaleString('en-US')}</b>`:null,
+      amt!=null?`<b>${Math.round(amt).toLocaleString('en-US')}원</b>`:null,
+      s.vol_ratio!=null?`거래량 ×${(+s.vol_ratio).toFixed(2)}`:null
+    ]);
+  }else if(s.type==='sell'){
+    l2=J([
+      s.reason?esc(s.reason):esc(s.note||'매도'),
+      s.pl_pct!=null?`수익률 <b>${signPct(s.pl_pct)}</b>`:null,
+      s.pl_krw!=null?`<b>${signWon(s.pl_krw)}</b>`:null
+    ]);
   }else if(s.type==='bo'){
-    l2=`피벗 <b>${s.pivot!=null?s.pivot:(s.price||'')}</b>${s.price!=null?` · 현재 <b>${s.price}</b>`:''}`;
+    l2=J([
+      s.pivot!=null?`피벗 <b>${s.pivot}</b>`:null,
+      s.price!=null?`현재 <b>${s.price}</b>`:null,
+      s.vol_ratio!=null?`거래량 ×${(+s.vol_ratio).toFixed(2)}`:null
+    ]);
   }else{
     l2=`${esc(s.note||'')}${s.price!=null?` · <b>${s.price}</b>`:''}${s.stop!=null?` · 손절 <b>${s.stop}</b>`:''}`;
   }
   return `<div class="sig"><div class="ic ${m[0]}">${m[1]}</div><div class="body">
-    <div class="l1"><span class="act ${m[2]}">${m[3]} · ${s.market==='KR'?esc(s.name||s.sym):esc(s.sym)}</span><span class="t">${t}</span></div>
+    <div class="l1"><span class="act ${m[2]}">${m[3]} · ${nm}</span><span class="t">${t}</span></div>
     <div class="l2">${l2}</div></div></div>`;
 }
 
@@ -484,6 +511,7 @@ function renderPositions(){
     return `<div class="pos ${loss?'loss':''} ${danger?'danger':''}"><div class="accent"></div>
       <div class="hd"><div class="symbox"><span class="sym">${mainNm(p)}</span>${subNm(p)?`<span class="subnm">${subNm(p)}</span>`:''}</div><div class="plwrap"><div class="pl ${c}">${signPct(p.pl_pct)}</div><div class="plamt ${c}">${signWon(p.pl_krw)}</div></div></div>
       <div class="meta"><span class="m">진입 <b>${px(p.entry,p.market)}</b></span><span class="m">현재 <b>${px(p.current,p.market)}</b></span><span class="m">보유 <b>${p.hold_days||0}일</b></span></div>
+      ${(p.qty!=null||p.eval_amount!=null||p.rs!=null)?`<div class="meta">${p.qty!=null?`<span class="m">수량 <b>${(+p.qty).toLocaleString('en-US')}</b></span>`:''}${p.eval_amount!=null?`<span class="m">평가 <b>${Math.round(p.eval_amount).toLocaleString('en-US')}원</b></span>`:''}${p.rs!=null?`<span class="m">RS <b>${p.rs}</b></span>`:''}</div>`:''}
       <div class="stopline"><span class="sl">${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div>`;
   }).join(''):emptyMsg('보유 종목 없음');
 }
@@ -502,8 +530,10 @@ function renderWatch(){
       const up=(w.change_pct||0)>=0, dCls=key==='basing'?'':(up?'green':'amber'), dTxt=key==='basing'?'관찰':signPct(w.change_pct)+(up?' ▲':'');
       const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub=isKR?esc(w.sym):esc(w.name||'');
       const volTxt=(key==='breakout'&&w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((key==='breakout'&&w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:(key==='breakout'?' · 돌파':''));
-      return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
-        <div class="pv">${sub?`<span class="pvname">${sub}</span><span class="pvfix"> · ${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</span>`:`<span class="pvfix">${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}`:''}${volTxt}</span>`}</div></div>
+      const _pd=(w.pivot&&w.price)?((w.price-w.pivot)/w.pivot*100):null;
+      const pdTxt=(_pd!=null&&(key==='breakout'||key==='pivot_near'))?` (${_pd>=0?'+':''}${_pd.toFixed(1)}%)`:'';
+      return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.is_new?'<span class="newb">NEW</span>':''}${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
+        <div class="pv">${sub?`<span class="pvname">${sub}</span><span class="pvfix"> · ${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`:`<span class="pvfix">${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`}</div></div>
         <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>`;
     }).join(''):`<div class="witem" style="opacity:.45"><div class="l"><div class="pv">없음</div></div></div>`;
     html+='</div>';
