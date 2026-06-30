@@ -181,10 +181,12 @@
   .regcard:active{transform:scale(.995);}
   .regcard.sel.bull{box-shadow:0 0 0 2px var(--green);}
   .regcard.sel.bear{box-shadow:0 0 0 2px var(--red);}
+  .regcard.sel.side{box-shadow:0 0 0 2px var(--amber);}
   .regcard .pick{font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:.5px;
     padding:2px 7px;border-radius:5px;margin-left:8px;display:none;}
   .regcard.bull .pick{background:var(--green);color:#06231a;}
   .regcard.bear .pick{background:var(--red);color:#2a0307;}
+  .regcard.side .pick{background:var(--amber);color:#2a1a00;}
   body.light .regcard.bull .pick{color:#ffffff;}
   body.light .regcard.bear .pick{color:#ffffff;}
   .regcard.sel .pick{display:inline-block;}
@@ -198,6 +200,7 @@
   .regcard.bear .verdict{color:var(--red);background:var(--red-bg);}
   .regcard.side .verdict{color:var(--amber);background:var(--amber-bg);}
   .regcard.side{border-color:rgba(255,176,32,.4);}
+  .regcard.side.sel{border-color:var(--amber);}
   .regcard.side .ddbar i.hit{background:var(--amber);}
   .mkt.side{color:var(--amber);} .mkt.side .dot{background:var(--amber);}
   .regcard.bull{border-color:rgba(31,209,122,.35);}
@@ -420,7 +423,7 @@ const subNm=o=>o.market==='KR'?esc(o.sym):esc(o.name||'');
 // ── 데이터 로드 ──
 async function load(){
   try{
-    const r=await fetch(STATE_URL+'?t='+Date.now());
+    const r=await fetch(STATE_URL+'?t='+Date.now(),{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     STATE=await r.json(); renderAll(); checkNewSignals();
   }catch(e){
@@ -542,7 +545,7 @@ function renderWatch(){
     html+=`<div class="wgroup"><div class="wghead"><span class="tag ${color}" ${color?'':'style="color:var(--txt-dim)"'}>${label}</span><span class="cnt">${items.length}</span></div>`;
     html+=items.length?items.map(w=>{
       const up=(w.change_pct||0)>=0, dCls=key==='basing'?'':(up?'green':'amber'), dTxt=key==='basing'?'관찰':signPct(w.change_pct)+(up?' ▲':'');
-      const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub=isKR?esc(w.sym):esc(w.name||'');
+      const isKR=w.market==='KR', main=isKR?esc(w.name||w.sym):esc(w.sym), sub='';
       const volTxt=(key==='breakout'&&w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((key==='breakout'&&w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:(key==='breakout'?' · 돌파':''));
       const _pd=(w.pivot&&w.price)?((w.price-w.pivot)/w.pivot*100):null;
       const pdTxt=(_pd!=null&&(key==='breakout'||key==='pivot_near'))?` (${_pd>=0?'+':''}${_pd.toFixed(1)}%)`:'';
