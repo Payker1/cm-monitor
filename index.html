@@ -2,11 +2,11 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f5f6f8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="방치형 돈복사">
 <link rel="manifest" href="manifest.json">
 <title>방치형 돈복사</title>
@@ -380,7 +380,7 @@
   <button data-t="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>이력</button>
 </nav>
 <script>
-const STATE_URL='state.json', REFRESH_MS=30000;
+const STATE_URL='state.json', REFRESH_MS=15000;
 let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicked=false, posF='all', watF='all', sigF='all';
 
 // ── 탭 네비 ──
@@ -423,7 +423,7 @@ const subNm=o=>o.market==='KR'?esc(o.sym):esc(o.name||'');
 // ── 데이터 로드 ──
 async function load(){
   try{
-    const r=await fetch(STATE_URL+'?t='+Date.now(),{cache:'no-store'});
+    const r=await fetch(STATE_URL+'?t='+Date.now(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}});
     if(!r.ok) throw new Error('HTTP '+r.status);
     STATE=await r.json(); renderAll(); checkNewSignals();
   }catch(e){
