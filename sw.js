@@ -2,7 +2,7 @@
 // 핵심: index.html·state.json 등은 항상 네트워크 우선(network-first).
 // 캐시 때문에 옛 화면이 뜨는 문제 방지. 오프라인일 때만 캐시 폴백.
 
-const CACHE = 'cm-v3';               // 버전 올리면 옛 캐시 자동 폐기
+const CACHE = 'cm-v4';               // 버전 올리면 옛 캐시 자동 폐기
 const ASSETS = ['manifest.json'];    // 최소 자산만 사전 캐시
 
 // 설치: 즉시 활성화
