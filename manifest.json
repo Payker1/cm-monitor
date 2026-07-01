@@ -1,6 +1,6 @@
 {
   "name": "방치형 돈복사",
-  "short_name": "돈복사",
+  "short_name": "방치형 돈복사",
   "description": "CopyMoney 자동매매 모니터링",
   "start_url": "./index.html",
   "scope": "./",
