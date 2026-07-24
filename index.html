@@ -420,7 +420,7 @@ const rsCls=v=>v>=85?'hi':(v>=70?'mid':'lo');
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const emptyMsg=t=>`<div style="text-align:center;color:var(--txt-faint);font-family:'JetBrains Mono';font-size:12px;padding:30px 0">${t}</div>`;
 const fmtVal=v=>typeof v==='number'?v.toLocaleString('en-US'):(v||'');
-function fmtTV(v,mkt){ if(typeof v!=='number') return v||''; if(mkt==='kr') return Math.round(v/1e8).toLocaleString('en-US')+'억'; return (v/1e6).toLocaleString('en-US',{maximumFractionDigits:1})+'M$'; }
+function fmtTV(v,mkt){ if(typeof v!=='number') return v||''; if(mkt==='kr') return Math.round(v/1e8).toLocaleString('en-US')+'억'; return Math.round(v/1e6).toLocaleString('en-US')+'M$'; }
 const fm=(arr,f)=>f==='all'?(arr||[]):(arr||[]).filter(x=>(x.market||'')===f);
 function ownBadge(sym){ if((STATE.positions||[]).some(p=>p.sym===sym)) return ' <span class="ownb hold">보유</span>'; if((STATE.watchlist||[]).some(w=>w.sym===sym)) return ' <span class="ownb watch">관심</span>'; return ''; }
 const mainNm=o=>o.market==='KR'?esc(o.name||o.sym):esc(o.sym);
@@ -494,12 +494,10 @@ function sigRow(s){
   }
   let l2;
   if(s.type==='buy'){
-    const amt=s.amount!=null?s.amount:((s.price&&s.qty)?s.price*s.qty:null);
     l2=J([
       s.size_pct!=null?`포지션 ${s.size_pct}%`:null,
       s.price!=null?`매수 <b>${s.price}</b>`:null,
       s.qty!=null?`수량 <b>${(+s.qty).toLocaleString('en-US')}</b>`:null,
-      amt!=null?`<b>${Math.round(amt).toLocaleString('en-US')}원</b>`:null,
       s.vol_ratio!=null?`거래량 ×${(+s.vol_ratio).toFixed(2)}`:null
     ]);
   }else if(s.type==='sell'){
