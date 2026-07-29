@@ -585,7 +585,7 @@ function renderWatch(){
       if(key==='breakout'){
         volTxt=(w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:' · 돌파');
       }else if(key==='pivot_near'){
-        volTxt=(w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:((w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:'');
+        volTxt=(w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:'');
       }
       const _pd=(w.pivot&&w.price)?((w.price-w.pivot)/w.pivot*100):null;
       const pdTxt=(_pd!=null&&(key==='breakout'||key==='pivot_near'))?` (${_pd>=0?'+':''}${_pd.toFixed(1)}%)`:'';
