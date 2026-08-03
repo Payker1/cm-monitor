@@ -95,27 +95,35 @@
   .stat .k{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);letter-spacing:.5px;text-transform:uppercase;}
   .stat .v{font-family:'JetBrains Mono';font-weight:800;font-size:21px;margin-top:5px;}
   .stat .sub{font-size:11px;color:var(--txt-dim);margin-top:2px;}
-  .pos{background:var(--panel);border:1px solid var(--line-soft);border-radius:15px;
-    padding:14px;margin-bottom:10px;position:relative;overflow:hidden;}
+  .pos{background:var(--panel);border:1px solid var(--line-soft);border-radius:13px;
+    padding:12px 14px;margin-bottom:8px;position:relative;overflow:hidden;cursor:pointer;}
   .pos.danger{border-color:rgba(255,90,104,.45);}
   .pos .accent{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);}
   .pos.loss .accent{background:var(--red);}
-  .pos .hd{display:flex;justify-content:space-between;align-items:flex-start;}
-  .pos .sym{font-family:'JetBrains Mono';font-weight:800;font-size:17px;letter-spacing:.5px;}
+  .pos .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:5px;}
+  .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:16px;letter-spacing:.4px;}
+  .pos .t-r1{font-family:'JetBrains Mono';font-weight:800;font-size:14px;white-space:nowrap;}
+  .pos .t-l2{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-dim);}
+  .pos .t-r2{font-family:'JetBrains Mono';font-size:13px;font-weight:600;color:var(--txt);white-space:nowrap;}
   .subnm{font-size:10px;color:var(--txt-faint);font-weight:500;margin-top:1px;}
-  .symbox{display:flex;flex-direction:column;gap:1px;}
   .symwrap2{display:flex;flex-direction:column;gap:2px;}
   .symline{display:flex;align-items:center;gap:7px;}
-  .pos .plwrap{text-align:right;}
-  .pos .pl{font-family:'JetBrains Mono';font-weight:800;font-size:16px;}
-  .pos .plamt{font-family:'JetBrains Mono';font-weight:600;font-size:12px;margin-top:2px;color:var(--txt-dim);}
-  .pos .meta{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
+  .pos .pcaret{display:block;text-align:center;color:var(--txt-faint);font-size:10px;line-height:1;margin-top:7px;transition:transform .25s;}
+  .pos.open .pcaret{transform:rotate(180deg);}
+  .pos .exp{max-height:0;opacity:0;overflow:hidden;transition:max-height .28s ease,opacity .2s ease,margin-top .28s ease;}
+  .pos.open .exp{max-height:220px;opacity:1;margin-top:9px;}
+  .pos .meta{display:flex;gap:13px;flex-wrap:wrap;}
   .pos .m{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
   .pos .m b{color:var(--txt);font-weight:600;}
-  .stopline{margin-top:11px;background:var(--panel-2);border-radius:9px;padding:8px 11px;
+  .stopline{margin-top:10px;background:var(--panel-2);border-radius:9px;padding:8px 11px;
     display:flex;justify-content:space-between;align-items:center;}
   .stopline .sl{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
   .stopline .sv{font-family:'JetBrains Mono';font-size:12px;font-weight:700;}
+  .sec-label.labelrow{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .viewseg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px;gap:2px;flex:none;}
+  .viewseg button{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:0;color:var(--txt-faint);background:none;border:none;border-radius:999px;padding:4px 11px;cursor:pointer;transition:all .16s;text-transform:none;}
+  .viewseg button.von{background:var(--green-bg);color:var(--green);}
   .green{color:var(--green);}.red{color:var(--red);}.amber{color:var(--amber);}.purple{color:var(--purple);}
   .wgroup{margin-bottom:16px;}
   .wghead{display:flex;align-items:center;gap:8px;margin:2px 2px 9px;}
@@ -321,7 +329,7 @@
 </section>
 
 <section class="page" id="positions">
-  <div class="sec-label">보유 종목 · 수익률 높은 순</div>
+  <div class="sec-label labelrow">보유 종목 · 수익률 높은 순<div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button></div></div>
   <div class="filterrow rowtop"><div class="seg" id="segPos"><button class="chip on" data-m="all">전체</button><button class="chip" data-m="KR">KR</button><button class="chip" data-m="US">US</button></div><div class="updcluster"><span class="upd-t" id="updPos">—</span><button class="refbtn" id="refPos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v4h-4"/></svg>새로고침</button></div></div>
   <div id="posList"></div>
 </section>
@@ -399,6 +407,8 @@
 <script>
 const STATE_URL='state.json', REFRESH_MS=15000;
 let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicked=false, posF='all', watF='all', sigF='all', lastFetch=null, watchPicked=false;
+let posView=localStorage.getItem('cm_posview')||'eval';
+const posOpen=new Set();
 
 // ── 탭 네비 ──
 const btns=document.querySelectorAll('.nav button'), pages=document.querySelectorAll('.page');
@@ -552,7 +562,23 @@ function sigRow(s){
 }
 
 // ── 보유 ──
+function posExp(p,view){
+  const m=p.market;
+  const all={
+    entry:`평단 <b>${px(p.entry,m)}</b>`,
+    current:`현재 <b>${px(p.current,m)}</b>`,
+    hold:`보유 <b>${p.hold_days||0}일</b>`,
+    qty:p.qty!=null?`수량 <b>${maskQty(p.qty)}</b>`:'',
+    eval:p.eval_amount!=null?`평가 <b>${maskAmt(p.eval_amount)}</b>`:'',
+    rs:p.rs!=null?`RS <b>${p.rs}</b>`:'',
+    pl:`수익 <b>${maskSignWon(p.pl_krw)}</b>`,
+    plpct:`수익률 <b>${signPct(p.pl_pct)}</b>`
+  };
+  const order=view==='price'?['pl','plpct','hold','qty','eval','rs']:['entry','current','hold','rs'];
+  return order.map(k=>all[k]).filter(Boolean).map(x=>`<span class="m">${x}</span>`).join('');
+}
 function renderPositions(){
+  const view=posView;
   const ps=fm(STATE.positions,posF).slice().sort((a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
   const sumEval=ps.reduce((s,p)=>s+(p.eval_amount||0),0);
   const sumPl=ps.reduce((s,p)=>s+(p.pl_krw||0),0);
@@ -560,11 +586,22 @@ function renderPositions(){
   const sumHtml=ps.length?`<div class="possum"><div class="ps-l"><div class="ps-k">보유 ${ps.length}종목 · 총 평가금액</div><div class="ps-v">${maskWon(sumEval)}</div></div><div class="ps-r"><div class="ps-pct ${sc}">${signPct(sumPct)}</div><div class="ps-amt ${sc}">${maskSignWon(sumPl)}</div></div></div>`:'';
   document.getElementById('posList').innerHTML=ps.length?(sumHtml+ps.map(p=>{
     const loss=p.is_loss||(p.pl_pct||0)<0, c=loss?'red':'green', danger=(p.stop_dist_pct!=null&&Math.abs(p.stop_dist_pct)<2);
-    return `<div class="pos ${loss?'loss':''} ${danger?'danger':''}"><div class="accent"></div>
-      <div class="hd"><div class="symbox"><span class="sym">${mainNm(p)}</span>${subNm(p)?`<span class="subnm">${subNm(p)}</span>`:''}</div><div class="plwrap"><div class="pl ${c}">${signPct(p.pl_pct)}</div><div class="plamt ${c}">${maskSignWon(p.pl_krw)}</div></div></div>
-      <div class="meta"><span class="m">진입 <b>${px(p.entry,p.market)}</b></span><span class="m">현재 <b>${px(p.current,p.market)}</b></span><span class="m">보유 <b>${p.hold_days||0}일</b></span></div>
-      ${(p.qty!=null||p.eval_amount!=null||p.rs!=null)?`<div class="meta">${p.qty!=null?`<span class="m">수량 <b>${maskQty(p.qty)}</b></span>`:''}${p.eval_amount!=null?`<span class="m">평가 <b>${maskAmt(p.eval_amount)}</b></span>`:''}${p.rs!=null?`<span class="m">RS <b>${p.rs}</b></span>`:''}</div>`:''}
-      <div class="stopline"><span class="sl">${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div>`;
+    const key=`${p.sym}|${p.market}`, open=posOpen.has(key)?'open':'';
+    let r1c,r1txt,l2txt,r2txt;
+    if(view==='price'){
+      const d=(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
+      r1c=d==null?'':(d>=0?'green':'red'); r1txt=d==null?'—':`${signPct(d)}${d>=0?' ▲':' ▼'}`;
+      l2txt=px(p.entry,p.market); r2txt=px(p.current,p.market);
+    }else{
+      r1c=c; r1txt=`${maskSignWon(p.pl_krw)} (${signPct(p.pl_pct)})`;
+      l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2txt=p.eval_amount!=null?maskAmt(p.eval_amount):'';
+    }
+    return `<div class="pos ${loss?'loss':''} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
+      <div class="row1"><span class="t-sym">${mainNm(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
+      <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2">${r2txt}</span></div>
+      <div class="exp"><div class="meta">${posExp(p,view)}</div>
+        <div class="stopline"><span class="sl">${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div>
+      <span class="pcaret">⌄</span></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
 }
 
@@ -630,6 +667,12 @@ document.querySelectorAll('#segMarket .chip').forEach(c=>c.addEventListener('cli
   document.querySelectorAll('#segMarket .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curM=c.dataset.m;applyHist();renderTrades();}));
 function bindSeg(id,setF){ document.querySelectorAll('#'+id+' .chip').forEach(c=>c.addEventListener('click',()=>{ document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); setF(c.dataset.m); })); }
 bindSeg('segPos',f=>{posF=f;renderPositions();});
+(function(){
+  const pl=document.getElementById('posList');
+  if(pl) pl.addEventListener('click',e=>{const card=e.target.closest('.pos'); if(!card)return; const k=card.dataset.key; if(!k)return; if(posOpen.has(k))posOpen.delete(k); else posOpen.add(k); card.classList.toggle('open');});
+  document.querySelectorAll('#posViewSeg button').forEach(b=>b.classList.toggle('von',b.dataset.v===posView));
+  document.querySelectorAll('#posViewSeg button').forEach(b=>b.addEventListener('click',()=>{posView=b.dataset.v;localStorage.setItem('cm_posview',posView);document.querySelectorAll('#posViewSeg button').forEach(x=>x.classList.toggle('von',x.dataset.v===posView));renderPositions();}));
+})();
 bindSeg('segWat',f=>{watchPicked=true;watF=f;renderWatch();});
 bindSeg('segSig',f=>{sigF=f;renderSignals();});
 document.querySelectorAll('#segPeriod .chip').forEach(c=>c.addEventListener('click',()=>{
