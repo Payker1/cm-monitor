@@ -102,10 +102,10 @@
   .pos.loss .accent{background:var(--red);}
   .pos .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:2px;}
-  .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:17px;letter-spacing:.4px;}
+  .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:14px;letter-spacing:.4px;}
   .pos .t-r1{font-family:'JetBrains Mono';font-weight:800;font-size:14px;white-space:nowrap;}
   .pos .t-l2{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
-  .pos .t-r2{font-family:'JetBrains Mono';font-size:11px;font-weight:600;color:var(--txt-dim);white-space:nowrap;}
+  .pos .t-r2{font-family:'JetBrains Mono';font-size:11px;font-weight:500;white-space:nowrap;}
   .subnm{font-size:10px;color:var(--txt-faint);font-weight:500;margin-top:1px;}
   .symwrap2{display:flex;flex-direction:column;gap:2px;}
   .symline{display:flex;align-items:center;gap:7px;}
@@ -650,19 +650,19 @@ function renderPositions(){
   document.getElementById('posList').innerHTML=ps.length?(sumHtml+ps.map(p=>{
     const loss=p.is_loss||(p.pl_pct||0)<0, c=loss?'red':'green', danger=(p.stop_dist_pct!=null&&Math.abs(p.stop_dist_pct)<2);
     const key=`${p.sym}|${p.market}`, open=posOpen.has(key)?'open':'';
-    let r1c,r1txt,l2txt,r2txt;
+    let r1c,r1txt,l2txt,r2txt,r2c='';
     if(view==='price'){
       const d=(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
       r1c=d==null?'':(d>=0?'green':'red'); r1txt=d==null?'—':signPct(d);
-      l2txt=px(p.entry,p.market); r2txt=px(p.current,p.market);
+      l2txt=px(p.entry,p.market); r2txt=px(p.current,p.market); r2c='';
     }else{
-      r1c=c; r1txt=`${maskAmtSign(p.pl_krw)} (${signPct(p.pl_pct)})`;
-      l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2txt=p.eval_amount!=null?maskAmt(p.eval_amount):'';
+      r1c=''; r1txt=p.eval_amount!=null?maskAmt(p.eval_amount):'';
+      l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2c=c; r2txt=`${maskAmtSign(p.pl_krw)} (${signPct(p.pl_pct)})`;
     }
     return `<div class="pos ${loss?'loss':''} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
       <div class="row1"><span class="t-sym">${posName(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
-      <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2">${r2txt}</span></div>
-      <div class="exp"><div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div>${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}" data-avg="${p.entry!=null?p.entry:''}"></div>`:''}</div></div>`;
+      <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2 ${r2c}">${r2txt}</span></div>
+      <div class="exp">${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}" data-avg="${p.entry!=null?p.entry:''}"></div>`:''}<div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
   hydrateCharts('#posList .pos.open .chart');
 }
