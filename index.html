@@ -95,28 +95,26 @@
   .stat .k{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);letter-spacing:.5px;text-transform:uppercase;}
   .stat .v{font-family:'JetBrains Mono';font-weight:800;font-size:21px;margin-top:5px;}
   .stat .sub{font-size:11px;color:var(--txt-dim);margin-top:2px;}
-  .pos{background:var(--panel);border:1px solid var(--line-soft);border-radius:13px;
-    padding:12px 14px;margin-bottom:8px;position:relative;overflow:hidden;cursor:pointer;}
+  .pos{background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;
+    padding:9px 13px;margin-bottom:6px;position:relative;overflow:hidden;cursor:pointer;}
   .pos.danger{border-color:rgba(255,90,104,.45);}
   .pos .accent{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);}
   .pos.loss .accent{background:var(--red);}
   .pos .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
-  .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:5px;}
-  .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:16px;letter-spacing:.4px;}
+  .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:2px;}
+  .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:17px;letter-spacing:.4px;}
   .pos .t-r1{font-family:'JetBrains Mono';font-weight:800;font-size:14px;white-space:nowrap;}
-  .pos .t-l2{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-dim);}
-  .pos .t-r2{font-family:'JetBrains Mono';font-size:13px;font-weight:600;color:var(--txt);white-space:nowrap;}
+  .pos .t-l2{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
+  .pos .t-r2{font-family:'JetBrains Mono';font-size:11px;font-weight:600;color:var(--txt-dim);white-space:nowrap;}
   .subnm{font-size:10px;color:var(--txt-faint);font-weight:500;margin-top:1px;}
   .symwrap2{display:flex;flex-direction:column;gap:2px;}
   .symline{display:flex;align-items:center;gap:7px;}
-  .pos .pcaret{display:block;text-align:center;color:var(--txt-faint);font-size:10px;line-height:1;margin-top:7px;transition:transform .25s;}
-  .pos.open .pcaret{transform:rotate(180deg);}
   .pos .exp{max-height:0;opacity:0;overflow:hidden;transition:max-height .28s ease,opacity .2s ease,margin-top .28s ease;}
-  .pos.open .exp{max-height:220px;opacity:1;margin-top:9px;}
+  .pos.open .exp{max-height:120px;opacity:1;margin-top:8px;}
   .pos .meta{display:flex;gap:13px;flex-wrap:wrap;}
   .pos .m{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
   .pos .m b{color:var(--txt);font-weight:600;}
-  .stopline{margin-top:10px;background:var(--panel-2);border-radius:9px;padding:8px 11px;
+  .stopline{margin-top:8px;background:var(--panel-2);border-radius:9px;padding:7px 11px;
     display:flex;justify-content:space-between;align-items:center;}
   .stopline .sl{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
   .stopline .sv{font-family:'JetBrains Mono';font-size:12px;font-weight:700;}
@@ -599,9 +597,8 @@ function renderPositions(){
     return `<div class="pos ${loss?'loss':''} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
       <div class="row1"><span class="t-sym">${mainNm(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
       <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2">${r2txt}</span></div>
-      <div class="exp"><div class="meta">${posExp(p,view)}</div>
-        <div class="stopline"><span class="sl">${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div>
-      <span class="pcaret">⌄</span></div>`;
+      <div class="exp"><div class="meta"><span class="m">보유 <b>${p.hold_days||0}일</b></span></div>
+        <div class="stopline"><span class="sl">${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
 }
 
@@ -623,9 +620,11 @@ function renderWatch(){
         volTxt=(w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:' · 돌파');
       }else if(key==='pivot_near'){
         volTxt=(w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:'');
+      }else if(key==='basing'){
+        volTxt=(w.vol_ratio!=null)?` · 추정거래량 ×${(+w.vol_ratio).toFixed(2)}`:((w.est_vol!=null)?` · 추정 ${fmtTV(w.est_vol,isKR?'kr':'us')}`:'');
       }
       const _pd=(w.pivot&&w.price)?((w.price-w.pivot)/w.pivot*100):null;
-      const pdTxt=(_pd!=null&&(key==='breakout'||key==='pivot_near'))?` (${_pd>=0?'+':''}${_pd.toFixed(1)}%)`:'';
+      const pdTxt=(_pd!=null&&(key==='breakout'||key==='pivot_near'||key==='basing'))?` (${_pd>=0?'+':''}${_pd.toFixed(1)}%)`:'';
       return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.is_new?'<span class="newb">NEW</span>':''}${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
         <div class="pv">${sub?`<span class="pvname">${sub}</span><span class="pvfix"> · ${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`:`<span class="pvfix">${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`}</div></div>
         <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>`;
