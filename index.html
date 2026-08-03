@@ -99,7 +99,8 @@
     padding:9px 13px;margin-bottom:6px;position:relative;overflow:hidden;cursor:pointer;}
   .pos.danger{border-color:rgba(255,90,104,.45);}
   .pos .accent{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);}
-  .pos.loss .accent{background:var(--red);}
+  .pos.down .accent{background:var(--red);}
+  .pos.flat .accent{background:var(--txt-faint);}
   .pos .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:2px;}
   .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:14px;letter-spacing:.4px;}
@@ -335,7 +336,7 @@
 </section>
 
 <section class="page" id="positions">
-  <div class="sec-label labelrow">보유 종목 · 수익률 높은 순<div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button></div></div>
+  <div class="sec-label labelrow"><span id="posSortLabel">보유 종목 · 총 수익률 높은 순</span><div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button></div></div>
   <div class="filterrow rowtop"><div class="seg" id="segPos"><button class="chip on" data-m="all">전체</button><button class="chip" data-m="KR">KR</button><button class="chip" data-m="US">US</button></div><div class="updcluster"><span class="upd-t" id="updPos">—</span><button class="refbtn" id="refPos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v4h-4"/></svg>새로고침</button></div></div>
   <div id="posList"></div>
 </section>
@@ -642,7 +643,11 @@ function mountChart(m){ if(!m)return; const avg=(m.dataset.avg!=null&&m.dataset.
 function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(mountChart); }
 function renderPositions(){
   const view=posView;
-  const ps=fm(STATE.positions,posF).slice().sort((a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
+  const dchg=p=>(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
+  const ps=fm(STATE.positions,posF).slice().sort(view==='price'
+    ? (a,b)=>((dchg(b)==null?-1e9:dchg(b))-(dchg(a)==null?-1e9:dchg(a)))
+    : (a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
+  const lbl=document.getElementById('posSortLabel'); if(lbl) lbl.textContent=view==='price'?'보유 종목 · 일간 수익률 높은 순':'보유 종목 · 총 수익률 높은 순';
   const sumEval=ps.reduce((s,p)=>s+(p.eval_amount||0),0);
   const sumPl=ps.reduce((s,p)=>s+(p.pl_krw||0),0);
   const sumCost=sumEval-sumPl, sumPct=sumCost>0?(sumPl/sumCost*100):0, sc=sumPl>=0?'green':'red';
@@ -650,16 +655,20 @@ function renderPositions(){
   document.getElementById('posList').innerHTML=ps.length?(sumHtml+ps.map(p=>{
     const loss=p.is_loss||(p.pl_pct||0)<0, c=loss?'red':'green', danger=(p.stop_dist_pct!=null&&Math.abs(p.stop_dist_pct)<2);
     const key=`${p.sym}|${p.market}`, open=posOpen.has(key)?'open':'';
+    const d=(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
+    let accent;
+    if(view==='price'){ accent=(d==null||Math.abs(d)<0.005)?'flat':(d>0?'up':'down'); }
+    else{ const v=(p.pl_krw!=null?Math.round(p.pl_krw):Math.round(p.pl_pct||0)); accent=(v===0)?'flat':(v>0?'up':'down'); }
+    const accCls=accent==='down'?'down':(accent==='flat'?'flat':'');
     let r1c,r1txt,l2txt,r2txt,r2c='';
     if(view==='price'){
-      const d=(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
-      r1c=d==null?'':(d>=0?'green':'red'); r1txt=d==null?'—':signPct(d);
+      r1c=d==null?'':(Math.abs(d)<0.005?'':(d>0?'green':'red')); r1txt=d==null?'—':signPct(d);
       l2txt=px(p.entry,p.market); r2txt=px(p.current,p.market); r2c='';
     }else{
       r1c=''; r1txt=p.eval_amount!=null?maskAmt(p.eval_amount):'';
-      l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2c=c; r2txt=`${maskAmtSign(p.pl_krw)} (${signPct(p.pl_pct)})`;
+      l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2c=(Math.round(p.pl_krw||0)===0?'':c); r2txt=`${maskAmtSign(p.pl_krw)} (${signPct(p.pl_pct)})`;
     }
-    return `<div class="pos ${loss?'loss':''} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
+    return `<div class="pos ${accCls} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
       <div class="row1"><span class="t-sym">${posName(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
       <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2 ${r2c}">${r2txt}</span></div>
       <div class="exp">${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}" data-avg="${p.entry!=null?p.entry:''}"></div>`:''}<div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
