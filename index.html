@@ -443,6 +443,9 @@ const maskSignWon=n=>hideBal?'******':signWon(n);
 const maskQty=v=>hideBal?'******':(+v).toLocaleString('en-US');
 const maskAmt=v=>hideBal?'******':Math.round(v).toLocaleString('en-US')+'원';
 const signWon=n=>(n>=0?'+':'−')+'₩'+Math.abs(Math.round(n||0)).toLocaleString('en-US');
+const signAmt=n=>(n>=0?'+':'−')+Math.abs(Math.round(n||0)).toLocaleString('en-US');
+const maskAmtSign=n=>hideBal?'******':signAmt(n);
+const posName=p=>esc(p.market==='KR'?(p.name||p.sym):(p.name_ko||p.sym));
 const signPct=n=>(n>=0?'+':'−')+Math.abs(n||0).toFixed(2)+'%';
 const px=(v,mkt)=>mkt==='US'?'$'+(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):Math.round(+v||0).toLocaleString('en-US');
 const cls=n=>n>=0?'green':'red';
@@ -528,7 +531,7 @@ function renderHome(){
 }
 
 // ── 시그널 행 ──
-const SIG_META={buy:['buy','BUY','green','매수 체결'],sell:['sell','SEL','red','매도 체결'],add:['watch','ADD','purple','관심종목 추가'],bo:['watch','BO','blue','피벗 돌파'],stop:['stop','STP','amber','손절선 조정'],alert:['alert','ALT','blue','시장 국면']};
+const SIG_META={buy:['buy','BUY','green','매수 체결'],pyramid:['buy','ADD','green','추가 매수'],sell:['sell','SEL','red','매도 체결'],add:['watch','ADD','purple','관심종목 추가'],bo:['watch','BO','blue','피벗 돌파'],chase_drop:['stop','OUT','amber','추격 이탈'],stop:['stop','STP','amber','손절선 조정'],alert:['alert','ALT','blue','시장 국면']};
 function sigRow(s){
   const m=SIG_META[s.type]||['alert','·','blue',s.type];
   const t=s.ts?`${s.ts.slice(5,7)}.${s.ts.slice(8,10)} ${s.ts.slice(11,16)}`:'';
@@ -541,12 +544,18 @@ function sigRow(s){
       <div class="l2">${esc(s.note||'')}</div></div></div>`;
   }
   let l2;
-  if(s.type==='buy'){
+  if(s.type==='buy'||s.type==='pyramid'){
     l2=J([
       s.size_pct!=null?`포지션 ${s.size_pct}%`:null,
       s.price!=null?`매수 <b>${s.price}</b>`:null,
       s.qty!=null?`수량 <b>${(+s.qty).toLocaleString('en-US')}</b>`:null,
       s.vol_ratio!=null?`거래량 ×${(+s.vol_ratio).toFixed(2)}`:null
+    ]);
+  }else if(s.type==='chase_drop'){
+    l2=J([
+      s.pivot!=null?`피벗 <b>${s.pivot}</b>`:null,
+      s.price!=null?`현재 <b>${s.price}</b>`:null,
+      (s.pivot!=null&&s.price!=null)?`+${(((s.price-s.pivot)/s.pivot)*100).toFixed(1)}% 초과`:'추격 이탈'
     ]);
   }else if(s.type==='sell'){
     l2=J([
@@ -586,12 +595,15 @@ function posExp(p,view){
 }
 // ── 종목 차트 (일봉 3개월 + 이평선 5종) ──
 const chartCache=new Map();
-function buildChartSVG(data){
-  const bars=(data&&data.bars)||[];
+function buildChartSVG(data,opts){
+  opts=opts||{};
+  const bars=(data&&data.bars)||[], mkt=(data&&data.market)||'US';
   if(bars.length<2) return '<div class="cherr">차트 데이터 부족</div>';
   const W=324,H=150,padL=3,padR=3,padT=8,padB=4, plotW=W-padL-padR, plotH=H-padT-padB, n=bars.length;
   let mn=Infinity,mx=-Infinity; const con=v=>{if(v!=null&&isFinite(v)){if(v<mn)mn=v;if(v>mx)mx=v;}};
-  bars.forEach(b=>{con(b.h);con(b.l);con(b.ma10);con(b.ma20);con(b.ma50);con(b.ma150);con(b.ma200);});
+  let hi=-Infinity;
+  bars.forEach(b=>{con(b.h);con(b.l);con(b.ma10);con(b.ma20);con(b.ma50);con(b.ma150);con(b.ma200); if(b.h!=null&&b.h>hi)hi=b.h;});
+  const avg=(opts.avg!=null&&isFinite(opts.avg))?opts.avg:null; if(avg!=null)con(avg);
   if(!isFinite(mn)||!isFinite(mx)||mx<=mn){mx=mn+1;}
   const pd=(mx-mn)*0.04; mn-=pd; mx+=pd;
   const X=i=>padL+(n===1?0:i/(n-1))*plotW, Y=v=>padT+(mx-v)/(mx-mn)*plotH;
@@ -604,13 +616,17 @@ function buildChartSVG(data){
   const ma=(k,color,w)=>{const pts=bars.map((b,i)=>(b[k]!=null&&isFinite(b[k]))?`${X(i).toFixed(1)},${Y(b[k]).toFixed(1)}`:null).filter(Boolean);
     return pts.length>=2?`<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" opacity="0.92"/>`:'';};
   const mas=ma('ma10','var(--txt-faint)',1)+ma('ma20','var(--txt)',1)+ma('ma50','var(--red)',1.2)+ma('ma150','var(--amber)',1.2)+ma('ma200','var(--green)',1.4);
+  const marker=(val,color,label)=>{ if(val==null||!isFinite(val))return ''; const y=Y(val), ly=Math.min(Math.max(y-2,9),H-3);
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="0.8" stroke-dasharray="3 2.5" opacity="0.85"/>`
+      +`<text x="${W-padR-1}" y="${ly.toFixed(1)}" text-anchor="end" font-size="8" font-family="'JetBrains Mono',monospace" font-weight="700" fill="${color}">${label}</text>`;};
+  const mk=(isFinite(hi)?marker(hi,'var(--txt-dim)','최고 '+px(hi,mkt)):'')+(avg!=null?marker(avg,'var(--blue)','평단 '+px(avg,mkt)):'');
   const leg=`<div class="chleg"><span style="color:var(--txt-faint)">━10</span><span style="color:var(--txt)">━20</span><span style="color:var(--red)">━50</span><span style="color:var(--amber)">━150</span><span style="color:var(--green)">━200</span></div>`;
-  return `<div class="chwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="chsvg">${bs}${mas}</svg>${leg}</div>`;
+  return `<div class="chwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="chsvg">${bs}${mas}${mk}</svg>${leg}</div>`;
 }
-async function loadChart(market,sym,mount){
-  if(!mount||!market||!sym) return;
+async function loadChart(market,sym,mount,opts){
+  if(!mount||!market||!sym) return; opts=opts||{};
   const key=`${market}_${sym}`, cached=chartCache.get(key);
-  if(cached&&cached.status==='done'){ mount.innerHTML=cached.svg; return; }
+  if(cached&&cached.status==='done'){ mount.innerHTML=buildChartSVG(cached.data,opts); return; }
   if(cached&&cached.status==='err'){ mount.innerHTML='<div class="cherr">차트 데이터 없음</div>'; return; }
   if(cached&&cached.status==='loading'){ return; }
   chartCache.set(key,{status:'loading'});
@@ -618,11 +634,12 @@ async function loadChart(market,sym,mount){
   try{
     const r=await fetch(`charts/${key}.json?t=${Date.now()}`,{cache:'no-store'});
     if(!r.ok) throw new Error('http '+r.status);
-    const data=await r.json(), svg=buildChartSVG(data);
-    chartCache.set(key,{status:'done',svg}); mount.innerHTML=svg;
+    const data=await r.json();
+    chartCache.set(key,{status:'done',data}); mount.innerHTML=buildChartSVG(data,opts);
   }catch(e){ chartCache.set(key,{status:'err'}); mount.innerHTML='<div class="cherr">차트 데이터 없음</div>'; }
 }
-function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(m=>loadChart(m.dataset.mk,m.dataset.sym,m)); }
+function mountChart(m){ if(!m)return; const avg=(m.dataset.avg!=null&&m.dataset.avg!=='')?parseFloat(m.dataset.avg):null; loadChart(m.dataset.mk,m.dataset.sym,m,{avg}); }
+function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(mountChart); }
 function renderPositions(){
   const view=posView;
   const ps=fm(STATE.positions,posF).slice().sort((a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
@@ -636,16 +653,16 @@ function renderPositions(){
     let r1c,r1txt,l2txt,r2txt;
     if(view==='price'){
       const d=(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
-      r1c=d==null?'':(d>=0?'green':'red'); r1txt=d==null?'—':`${signPct(d)}${d>=0?' ▲':' ▼'}`;
+      r1c=d==null?'':(d>=0?'green':'red'); r1txt=d==null?'—':signPct(d);
       l2txt=px(p.entry,p.market); r2txt=px(p.current,p.market);
     }else{
-      r1c=c; r1txt=`${maskSignWon(p.pl_krw)} (${signPct(p.pl_pct)})`;
+      r1c=c; r1txt=`${maskAmtSign(p.pl_krw)} (${signPct(p.pl_pct)})`;
       l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2txt=p.eval_amount!=null?maskAmt(p.eval_amount):'';
     }
     return `<div class="pos ${loss?'loss':''} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
-      <div class="row1"><span class="t-sym">${mainNm(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
+      <div class="row1"><span class="t-sym">${posName(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
       <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2">${r2txt}</span></div>
-      <div class="exp">${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}"></div>`:''}<div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
+      <div class="exp"><div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div>${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}" data-avg="${p.entry!=null?p.entry:''}"></div>`:''}</div></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
   hydrateCharts('#posList .pos.open .chart');
 }
@@ -658,7 +675,7 @@ function renderWatch(){
   groups.forEach(([key,label,color])=>{
     let items=ws.filter(w=>w.group===key);
     if(key==='breakout'){ items=items.slice().sort((a,b)=>((b.vol_ratio??b.est_vol??0)-(a.vol_ratio??a.est_vol??0))); }
-    else if(key==='pivot_near'){ items=items.slice().sort((a,b)=>{ const da=(a.pivot&&a.price)?Math.abs(a.price-a.pivot)/a.pivot:Infinity, db=(b.pivot&&b.price)?Math.abs(b.price-b.pivot)/b.pivot:Infinity; return da-db; }); }
+    else if(key==='pivot_near'||key==='basing'){ items=items.slice().sort((a,b)=>{ const da=(a.pivot&&a.price)?Math.abs(a.price-a.pivot)/a.pivot:Infinity, db=(b.pivot&&b.price)?Math.abs(b.price-b.pivot)/b.pivot:Infinity; return da-db; }); }
     html+=`<div class="wgroup"><div class="wghead"><span class="tag ${color}" ${color?'':'style="color:var(--txt-dim)"'}>${label}</span><span class="cnt">${items.length}</span></div>`;
     html+=items.length?items.map(w=>{
       const up=(w.change_pct||0)>=0, dCls=key==='basing'?'':(up?'green':'amber'), dTxt=key==='basing'?'관찰':signPct(w.change_pct)+(up?' ▲':'');
@@ -720,12 +737,12 @@ function bindSeg(id,setF){ document.querySelectorAll('#'+id+' .chip').forEach(c=
 bindSeg('segPos',f=>{posF=f;renderPositions();});
 (function(){
   const pl=document.getElementById('posList');
-  if(pl) pl.addEventListener('click',e=>{const card=e.target.closest('.pos'); if(!card)return; const k=card.dataset.key; if(!k)return; const nowOpen=!posOpen.has(k); if(nowOpen)posOpen.add(k); else posOpen.delete(k); card.classList.toggle('open',nowOpen); if(nowOpen){const m=card.querySelector('.chart'); if(m)loadChart(m.dataset.mk,m.dataset.sym,m);}});
+  if(pl) pl.addEventListener('click',e=>{const card=e.target.closest('.pos'); if(!card)return; const k=card.dataset.key; if(!k)return; const nowOpen=!posOpen.has(k); if(nowOpen)posOpen.add(k); else posOpen.delete(k); card.classList.toggle('open',nowOpen); if(nowOpen){const m=card.querySelector('.chart'); if(m)mountChart(m);}});
   document.querySelectorAll('#posViewSeg button').forEach(b=>b.classList.toggle('von',b.dataset.v===posView));
   document.querySelectorAll('#posViewSeg button').forEach(b=>b.addEventListener('click',()=>{posView=b.dataset.v;localStorage.setItem('cm_posview',posView);document.querySelectorAll('#posViewSeg button').forEach(x=>x.classList.toggle('von',x.dataset.v===posView));renderPositions();}));
 })();
 bindSeg('segWat',f=>{watchPicked=true;watF=f;renderWatch();});
-(function(){const wl=document.getElementById('watchList'); if(wl) wl.addEventListener('click',e=>{const it=e.target.closest('.witem.hasch'); if(!it)return; const k=it.dataset.ck; if(!k)return; const nowOpen=!watchOpen.has(k); if(nowOpen)watchOpen.add(k); else watchOpen.delete(k); it.classList.toggle('open',nowOpen); if(nowOpen){const m=it.querySelector('.chart'); if(m)loadChart(m.dataset.mk,m.dataset.sym,m);}});})();
+(function(){const wl=document.getElementById('watchList'); if(wl) wl.addEventListener('click',e=>{const it=e.target.closest('.witem.hasch'); if(!it)return; const k=it.dataset.ck; if(!k)return; const nowOpen=!watchOpen.has(k); if(nowOpen)watchOpen.add(k); else watchOpen.delete(k); it.classList.toggle('open',nowOpen); if(nowOpen){const m=it.querySelector('.chart'); if(m)mountChart(m);}});})();
 bindSeg('segSig',f=>{sigF=f;renderSignals();});
 document.querySelectorAll('#segPeriod .chip').forEach(c=>c.addEventListener('click',()=>{
   document.querySelectorAll('#segPeriod .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curP=c.dataset.p;applyHist();}));
@@ -804,7 +821,7 @@ function checkNewSignals(){
   const sigs=(STATE&&STATE.signals_recent)||[];
   if(!sigs.length) return;
   const newest=sigs[0].ts||'';
-  if(lastSigTs && newest>lastSigTs && ('Notification' in window) && Notification.permission==='granted' && ['buy','sell'].includes(sigs[0].type)){
+  if(lastSigTs && newest>lastSigTs && ('Notification' in window) && Notification.permission==='granted' && ['buy','sell','pyramid'].includes(sigs[0].type)){
     const s=sigs[0], label=(SIG_META[s.type]||[,,,s.type])[3];
     try{ new Notification(`${label} · ${s.market==='KR'?(s.name||s.sym):s.sym}`,{tag:newest}); }catch(e){}
   }
