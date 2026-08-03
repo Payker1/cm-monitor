@@ -110,7 +110,7 @@
   .symwrap2{display:flex;flex-direction:column;gap:2px;}
   .symline{display:flex;align-items:center;gap:7px;}
   .pos .exp{max-height:0;opacity:0;overflow:hidden;transition:max-height .28s ease,opacity .2s ease,margin-top .28s ease;}
-  .pos.open .exp{max-height:120px;opacity:1;margin-top:8px;}
+  .pos.open .exp{max-height:340px;opacity:1;margin-top:8px;}
   .pos .meta{display:flex;gap:13px;flex-wrap:wrap;}
   .pos .m{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
   .pos .m b{color:var(--txt);font-weight:600;}
@@ -129,7 +129,11 @@
   .wghead .cnt{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);
     border:1px solid var(--line);border-radius:6px;padding:1px 7px;}
   .witem{background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;
-    padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+    padding:11px 13px;margin-bottom:8px;display:flex;flex-direction:column;align-items:stretch;}
+  .witem .wtop{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .witem.hasch{cursor:pointer;}
+  .witem .wexp{max-height:0;opacity:0;overflow:hidden;transition:max-height .28s ease,opacity .2s ease,margin-top .28s ease;}
+  .witem.open .wexp{max-height:340px;opacity:1;margin-top:9px;}
   .witem .l{min-width:0;}
   .witem .l .symrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
   .witem .l .sym{font-family:'JetBrains Mono';font-weight:700;font-size:15px;}
@@ -144,6 +148,10 @@
   .witem .r{text-align:right;}
   .witem .r .px{font-family:'JetBrains Mono';font-weight:700;font-size:14px;}
   .witem .r .d{font-family:'JetBrains Mono';font-size:11px;margin-top:2px;}
+  .chwrap{margin-top:2px;}
+  .chsvg{width:100%;height:auto;display:block;background:var(--panel-2);border-radius:8px;}
+  .chleg{display:flex;gap:11px;justify-content:center;font-family:'JetBrains Mono';font-size:9px;font-weight:700;margin-top:5px;letter-spacing:.2px;}
+  .chload,.cherr{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-faint);text-align:center;padding:20px 8px;}
   .sig{display:flex;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line-soft);}
   .sig .ic{width:36px;height:36px;border-radius:9px;flex:none;display:grid;place-items:center;
     font-family:'JetBrains Mono';font-weight:800;font-size:11px;}
@@ -407,6 +415,7 @@ const STATE_URL='state.json', REFRESH_MS=15000;
 let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicked=false, posF='all', watF='all', sigF='all', lastFetch=null, watchPicked=false;
 let posView=localStorage.getItem('cm_posview')||'eval';
 const posOpen=new Set();
+const watchOpen=new Set();
 
 // ── 탭 네비 ──
 const btns=document.querySelectorAll('.nav button'), pages=document.querySelectorAll('.page');
@@ -575,6 +584,45 @@ function posExp(p,view){
   const order=view==='price'?['pl','plpct','hold','qty','eval','rs']:['entry','current','hold','rs'];
   return order.map(k=>all[k]).filter(Boolean).map(x=>`<span class="m">${x}</span>`).join('');
 }
+// ── 종목 차트 (일봉 3개월 + 이평선 5종) ──
+const chartCache=new Map();
+function buildChartSVG(data){
+  const bars=(data&&data.bars)||[];
+  if(bars.length<2) return '<div class="cherr">차트 데이터 부족</div>';
+  const W=324,H=150,padL=3,padR=3,padT=8,padB=4, plotW=W-padL-padR, plotH=H-padT-padB, n=bars.length;
+  let mn=Infinity,mx=-Infinity; const con=v=>{if(v!=null&&isFinite(v)){if(v<mn)mn=v;if(v>mx)mx=v;}};
+  bars.forEach(b=>{con(b.h);con(b.l);con(b.ma10);con(b.ma20);con(b.ma50);con(b.ma150);con(b.ma200);});
+  if(!isFinite(mn)||!isFinite(mx)||mx<=mn){mx=mn+1;}
+  const pd=(mx-mn)*0.04; mn-=pd; mx+=pd;
+  const X=i=>padL+(n===1?0:i/(n-1))*plotW, Y=v=>padT+(mx-v)/(mx-mn)*plotH;
+  const bw=Math.max(1.1,plotW/n*0.55);
+  let bs='';
+  bars.forEach((b,i)=>{const x=X(i),up=(b.c>=b.o),col=up?'var(--green)':'var(--red)';
+    bs+=`<line x1="${x.toFixed(1)}" y1="${Y(b.h).toFixed(1)}" x2="${x.toFixed(1)}" y2="${Y(b.l).toFixed(1)}" stroke="${col}" stroke-width="1"/>`
+      +`<line x1="${(x-bw/2).toFixed(1)}" y1="${Y(b.o).toFixed(1)}" x2="${x.toFixed(1)}" y2="${Y(b.o).toFixed(1)}" stroke="${col}" stroke-width="1"/>`
+      +`<line x1="${x.toFixed(1)}" y1="${Y(b.c).toFixed(1)}" x2="${(x+bw/2).toFixed(1)}" y2="${Y(b.c).toFixed(1)}" stroke="${col}" stroke-width="1"/>`;});
+  const ma=(k,color,w)=>{const pts=bars.map((b,i)=>(b[k]!=null&&isFinite(b[k]))?`${X(i).toFixed(1)},${Y(b[k]).toFixed(1)}`:null).filter(Boolean);
+    return pts.length>=2?`<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" opacity="0.92"/>`:'';};
+  const mas=ma('ma10','var(--txt-faint)',1)+ma('ma20','var(--txt)',1)+ma('ma50','var(--red)',1.2)+ma('ma150','var(--amber)',1.2)+ma('ma200','var(--green)',1.4);
+  const leg=`<div class="chleg"><span style="color:var(--txt-faint)">━10</span><span style="color:var(--txt)">━20</span><span style="color:var(--red)">━50</span><span style="color:var(--amber)">━150</span><span style="color:var(--green)">━200</span></div>`;
+  return `<div class="chwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="chsvg">${bs}${mas}</svg>${leg}</div>`;
+}
+async function loadChart(market,sym,mount){
+  if(!mount||!market||!sym) return;
+  const key=`${market}_${sym}`, cached=chartCache.get(key);
+  if(cached&&cached.status==='done'){ mount.innerHTML=cached.svg; return; }
+  if(cached&&cached.status==='err'){ mount.innerHTML='<div class="cherr">차트 데이터 없음</div>'; return; }
+  if(cached&&cached.status==='loading'){ return; }
+  chartCache.set(key,{status:'loading'});
+  mount.innerHTML='<div class="chload">차트 불러오는 중…</div>';
+  try{
+    const r=await fetch(`charts/${key}.json?t=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok) throw new Error('http '+r.status);
+    const data=await r.json(), svg=buildChartSVG(data);
+    chartCache.set(key,{status:'done',svg}); mount.innerHTML=svg;
+  }catch(e){ chartCache.set(key,{status:'err'}); mount.innerHTML='<div class="cherr">차트 데이터 없음</div>'; }
+}
+function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(m=>loadChart(m.dataset.mk,m.dataset.sym,m)); }
 function renderPositions(){
   const view=posView;
   const ps=fm(STATE.positions,posF).slice().sort((a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
@@ -597,9 +645,9 @@ function renderPositions(){
     return `<div class="pos ${loss?'loss':''} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
       <div class="row1"><span class="t-sym">${mainNm(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
       <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2">${r2txt}</span></div>
-      <div class="exp"><div class="meta"><span class="m">보유 <b>${p.hold_days||0}일</b></span></div>
-        <div class="stopline"><span class="sl">${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
+      <div class="exp">${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}"></div>`:''}<div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
+  hydrateCharts('#posList .pos.open .chart');
 }
 
 // ── 관심 ──
@@ -625,13 +673,17 @@ function renderWatch(){
       }
       const _pd=(w.pivot&&w.price)?((w.price-w.pivot)/w.pivot*100):null;
       const pdTxt=(_pd!=null&&(key==='breakout'||key==='pivot_near'||key==='basing'))?` (${_pd>=0?'+':''}${_pd.toFixed(1)}%)`:'';
-      return `<div class="witem"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.is_new?'<span class="newb">NEW</span>':''}${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
+      const ck=`${w.market}_${w.sym}`, hasCh=!!w.has_chart, wopen=watchOpen.has(ck)?'open':'';
+      return `<div class="witem ${hasCh?'hasch':''} ${wopen}" data-ck="${ck}" data-mk="${w.market}" data-sym="${esc(w.sym)}">
+        <div class="wtop"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.is_new?'<span class="newb">NEW</span>':''}${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
         <div class="pv">${sub?`<span class="pvname">${sub}</span><span class="pvfix"> · ${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`:`<span class="pvfix">${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`}</div></div>
-        <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>`;
-    }).join(''):`<div class="witem" style="opacity:.45"><div class="l"><div class="pv">없음</div></div></div>`;
+        <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>
+        ${hasCh?`<div class="wexp"><div class="chart" data-mk="${w.market}" data-sym="${esc(w.sym)}"></div></div>`:''}</div>`;
+    }).join(''):`<div class="witem" style="opacity:.45"><div class="wtop"><div class="l"><div class="pv">없음</div></div></div></div>`;
     html+='</div>';
   });
   document.getElementById('watchList').innerHTML=html;
+  hydrateCharts('#watchList .witem.open .chart');
 }
 
 // ── 시그널 피드 ──
@@ -668,11 +720,12 @@ function bindSeg(id,setF){ document.querySelectorAll('#'+id+' .chip').forEach(c=
 bindSeg('segPos',f=>{posF=f;renderPositions();});
 (function(){
   const pl=document.getElementById('posList');
-  if(pl) pl.addEventListener('click',e=>{const card=e.target.closest('.pos'); if(!card)return; const k=card.dataset.key; if(!k)return; if(posOpen.has(k))posOpen.delete(k); else posOpen.add(k); card.classList.toggle('open');});
+  if(pl) pl.addEventListener('click',e=>{const card=e.target.closest('.pos'); if(!card)return; const k=card.dataset.key; if(!k)return; const nowOpen=!posOpen.has(k); if(nowOpen)posOpen.add(k); else posOpen.delete(k); card.classList.toggle('open',nowOpen); if(nowOpen){const m=card.querySelector('.chart'); if(m)loadChart(m.dataset.mk,m.dataset.sym,m);}});
   document.querySelectorAll('#posViewSeg button').forEach(b=>b.classList.toggle('von',b.dataset.v===posView));
   document.querySelectorAll('#posViewSeg button').forEach(b=>b.addEventListener('click',()=>{posView=b.dataset.v;localStorage.setItem('cm_posview',posView);document.querySelectorAll('#posViewSeg button').forEach(x=>x.classList.toggle('von',x.dataset.v===posView));renderPositions();}));
 })();
 bindSeg('segWat',f=>{watchPicked=true;watF=f;renderWatch();});
+(function(){const wl=document.getElementById('watchList'); if(wl) wl.addEventListener('click',e=>{const it=e.target.closest('.witem.hasch'); if(!it)return; const k=it.dataset.ck; if(!k)return; const nowOpen=!watchOpen.has(k); if(nowOpen)watchOpen.add(k); else watchOpen.delete(k); it.classList.toggle('open',nowOpen); if(nowOpen){const m=it.querySelector('.chart'); if(m)loadChart(m.dataset.mk,m.dataset.sym,m);}});})();
 bindSeg('segSig',f=>{sigF=f;renderSignals();});
 document.querySelectorAll('#segPeriod .chip').forEach(c=>c.addEventListener('click',()=>{
   document.querySelectorAll('#segPeriod .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curP=c.dataset.p;applyHist();}));
