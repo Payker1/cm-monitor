@@ -721,17 +721,44 @@ function renderSignals(){
 
 // ── 이력 ──
 function renderHistory(){ applyHist(); renderTrades(); }
+// 선택된 기간(curP)의 시작 시각(ms). all 이면 0(전체 통과).
+function histCutoff(){
+  const now=new Date();
+  if(curP==='1m'){ const d=new Date(now); d.setMonth(d.getMonth()-1); return d.getTime(); }
+  if(curP==='3m'){ const d=new Date(now); d.setMonth(d.getMonth()-3); return d.getTime(); }
+  if(curP==='ytd'){ return new Date(now.getFullYear(),0,1).getTime(); }
+  return 0; // all
+}
+// 시장(curM)+기간(curP)으로 청산 거래를 필터. 청산일(exit_date) 기준.
+function histTrades(){
+  let ts=((STATE.history||{}).trades)||[];
+  if(curM!=='all') ts=ts.filter(t=>(t.market||'').toLowerCase()===curM);
+  const cutoff=histCutoff();
+  if(cutoff>0) ts=ts.filter(t=>{ const x=t.exit_date?Date.parse(t.exit_date):0; return x&&x>=cutoff; });
+  return ts;
+}
 function applyHist(){
-  const agg=((STATE.history||{}).agg||{})[curM]||{}, d=agg[curP]||{pl_krw:0,win_rate:0,avg_rr:0,count:0};
-  const pl=document.getElementById('sumPL'); pl.textContent=signWon(d.pl_krw); pl.className='big '+cls(d.pl_krw);
-  document.getElementById('sumWin').textContent=Math.round(d.win_rate||0)+'%';
-  document.getElementById('sumRR').textContent=(d.avg_rr||0).toFixed(1);
-  document.getElementById('sumN').textContent=(d.count||0)+'건';
+  // 서버 집계(agg) 대신 필터된 거래에서 직접 재계산 → 기간 선택이 정확히 반영됨.
+  const ts=histTrades();
+  let plSum=0, wins=0, gain=0, loss=0, lossN=0;
+  for(const t of ts){
+    const v=+t.pl_krw||0; plSum+=v;
+    const isLoss=t.is_loss||(+t.pl_pct||0)<0;
+    if(isLoss){ lossN++; loss+=Math.abs(+t.pl_pct||0); } else { wins++; gain+=Math.abs(+t.pl_pct||0); }
+  }
+  const n=ts.length;
+  const winRate=n?Math.round(wins/n*100):0;
+  // 손익비: 평균이익% / 평균손실% (손실 없으면 이익 종목만일 때 대비 안전 처리)
+  const avgWin=wins?gain/wins:0, avgLoss=lossN?loss/lossN:0;
+  const rr=avgLoss>0?(avgWin/avgLoss):(avgWin>0?avgWin:0);
+  const pl=document.getElementById('sumPL'); pl.textContent=signWon(plSum); pl.className='big '+cls(plSum);
+  document.getElementById('sumWin').textContent=winRate+'%';
+  document.getElementById('sumRR').textContent=rr.toFixed(1);
+  document.getElementById('sumN').textContent=n+'건';
   document.getElementById('sumScope').textContent='· '+({all:'전체',kr:'KR',us:'US'}[curM])+' · '+({'1m':'1개월','3m':'3개월',ytd:'YTD',all:'전체'}[curP]);
 }
 function renderTrades(){
-  let ts=((STATE.history||{}).trades)||[];
-  if(curM!=='all') ts=ts.filter(t=>(t.market||'').toLowerCase()===curM);
+  let ts=histTrades();
   document.getElementById('tradeList').innerHTML=ts.length?ts.map(t=>{
     const loss=t.is_loss||(t.pl_pct||0)<0, c=loss?'red':'green';
     return `<div class="trade ${loss?'loss':''}"><div class="accent"></div>
@@ -754,7 +781,7 @@ bindSeg('segWat',f=>{watchPicked=true;watF=f;renderWatch();});
 (function(){const wl=document.getElementById('watchList'); if(wl) wl.addEventListener('click',e=>{const it=e.target.closest('.witem.hasch'); if(!it)return; const k=it.dataset.ck; if(!k)return; const nowOpen=!watchOpen.has(k); if(nowOpen)watchOpen.add(k); else watchOpen.delete(k); it.classList.toggle('open',nowOpen); if(nowOpen){const m=it.querySelector('.chart'); if(m)mountChart(m);}});})();
 bindSeg('segSig',f=>{sigF=f;renderSignals();});
 document.querySelectorAll('#segPeriod .chip').forEach(c=>c.addEventListener('click',()=>{
-  document.querySelectorAll('#segPeriod .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curP=c.dataset.p;applyHist();}));
+  document.querySelectorAll('#segPeriod .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curP=c.dataset.p;applyHist();renderTrades();}));
 
 // ── 마켓 카드 ──
 function regCard(id,flag,name,d){
