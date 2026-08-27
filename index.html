@@ -582,14 +582,14 @@ function sigRow(s){
   if(s.type==='buy'||s.type==='pyramid'){
     l2=J([
       s.size_pct!=null?`포지션 ${s.size_pct}%`:null,
-      s.price!=null?`매수 <b>${s.price}</b>`:null,
+      s.price!=null?`매수 <b>${px(s.price,s.market)}</b>`:null,
       s.qty!=null?`수량 <b>${(+s.qty).toLocaleString('en-US')}</b>`:null,
       s.vol_ratio!=null?`거래량 ×${(+s.vol_ratio).toFixed(2)}`:null
     ]);
   }else if(s.type==='chase_drop'){
     l2=J([
-      s.pivot!=null?`피벗 <b>${s.pivot}</b>`:null,
-      s.price!=null?`현재 <b>${s.price}</b>`:null,
+      s.pivot!=null?`피벗 <b>${px(s.pivot,s.market)}</b>`:null,
+      s.price!=null?`현재 <b>${px(s.price,s.market)}</b>`:null,
       (s.pivot!=null&&s.price!=null)?`+${(((s.price-s.pivot)/s.pivot)*100).toFixed(1)}% 초과`:'추격 이탈'
     ]);
   }else if(s.type==='sell'){
@@ -600,12 +600,12 @@ function sigRow(s){
     ]);
   }else if(s.type==='bo'){
     l2=J([
-      s.pivot!=null?`피벗 <b>${s.pivot}</b>`:null,
-      s.price!=null?`현재 <b>${s.price}</b>`:null,
+      s.pivot!=null?`피벗 <b>${px(s.pivot,s.market)}</b>`:null,
+      s.price!=null?`현재 <b>${px(s.price,s.market)}</b>`:null,
       s.vol_ratio!=null?`거래량 ×${(+s.vol_ratio).toFixed(2)}`:null
     ]);
   }else{
-    l2=`${esc(s.note||'')}${s.price!=null?` · <b>${s.price}</b>`:''}${s.stop!=null?` · 손절 <b>${s.stop}</b>`:''}`;
+    l2=`${esc(s.note||'')}${s.price!=null?` · <b>${px(s.price,s.market)}</b>`:''}${s.stop!=null?` · 손절 <b>${px(s.stop,s.market)}</b>`:''}`;
   }
   return `<div class="sig"><div class="ic ${m[0]}">${m[1]}</div><div class="body">
     <div class="l1"><span class="act ${m[2]}">${m[3]} · ${nm}</span><span class="t">${t}</span></div>
