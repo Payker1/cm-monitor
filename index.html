@@ -103,7 +103,12 @@
   .pos.flat .accent{background:var(--txt-faint);}
   .pos .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:2px;}
-  .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:14px;letter-spacing:.4px;}
+  /* 미장 한글명(name_ko)은 '프리포트 맥모란' 처럼 공백을 포함하는데, JetBrains Mono 는
+     고정폭이라 공백이 0.6em(≈8.4px) 로 잡히는 반면 한글 글리프는 폴백 폰트에서 나와
+     단어 사이가 과하게 벌어져 보인다. word-spacing 으로 그 공백만 절반으로 줄인다
+     (letter-spacing 은 US 심볼 가독성 때문에 그대로 둔다). */
+  .pos .t-sym{font-family:'JetBrains Mono';font-weight:800;font-size:14px;letter-spacing:.4px;
+    word-spacing:-.3em;}
   .pos .t-r1{font-family:'JetBrains Mono';font-weight:800;font-size:14px;white-space:nowrap;}
   .pos .t-l2{font-family:'JetBrains Mono';font-size:11px;color:var(--txt-dim);}
   .pos .t-r2{font-family:'JetBrains Mono';font-size:11px;font-weight:500;white-space:nowrap;}
