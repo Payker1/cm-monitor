@@ -412,13 +412,33 @@
   <button data-t="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>이력</button>
 </nav>
 <script>
-// 데이터는 Pages 가 빌드하지 않는 data 브랜치에서 raw 로 직접 읽는다.
-// 같은 브랜치(main)에 30초마다 커밋하면 push 마다 Pages 재빌드가 걸리는데
-// 빌드가 38~39초라 34초 간격 push 에 계속 취소된다(실측 성공률 7% → 실제 배포는
-// 10분에 1회). 데이터를 Pages 밖으로 빼면 빌드가 경로에서 빠져 30초 신선도가
-// 그대로 도달하고, main 은 화면 코드가 바뀔 때만 재빌드된다.
-const DATA_BASE='https://raw.githubusercontent.com/Payker1/cm-monitor/data';
+// 데이터는 Pages 가 빌드하지 않는 data 브랜치에 있고, Cloudflare Worker 를 통해 읽는다.
+//   - main(Pages 빌드 브랜치)에 30초마다 커밋하면 push 마다 재빌드가 걸리는데 빌드가
+//     38~39초라 34초 간격 push 에 계속 취소된다(실측 성공률 7% → 실제 배포 10분에 1회).
+//   - 그렇다고 raw 를 직접 읽으면 max-age=300 + 쿼리스트링을 캐시 키에서 무시해
+//     5분 묵은 값이 온다(?t= 캐시버스터가 통하지 않음).
+//   - Worker 는 CDN 캐시가 없는 GitHub Contents API 를 대신 호출해 no-store 로 돌려준다.
+// FALLBACK: Worker 가 죽거나 토큰이 만료되면 raw 로 자동 강등한다. 신선도는 5분으로
+// 떨어지지만 화면이 죽지는 않는다. 표시 시각이 meta.ts 라 묵은 건 눈에 바로 보인다.
+const DATA_BASE='https://cm-state.kkl9363.workers.dev';
+const DATA_FALLBACK='https://raw.githubusercontent.com/Payker1/cm-monitor/data';
 const STATE_URL=DATA_BASE+'/state.json', REFRESH_MS=15000;
+
+// ⚠ 여기에 Cache-Control/Pragma 헤더를 넣지 말 것. 두 헤더는 CORS 안전목록이 아니라
+// 교차 출처 요청에서 OPTIONS 프리플라이트를 유발하는데, raw.githubusercontent.com 은
+// 프리플라이트에 응답하지 않아 fetch 가 통째로 실패한다(동일 출처였을 땐 무해했음).
+// 캐시 무력화는 ?t= 쿼리와 cache:'no-store' 로 충분하다.
+async function fetchData(path){
+  let err=null;
+  for(const base of [DATA_BASE, DATA_FALLBACK]){
+    try{
+      const r=await fetch(base+path+'?t='+Date.now(),{cache:'no-store'});
+      if(r.ok) return r;
+      err=new Error('HTTP '+r.status+' @ '+base);
+    }catch(e){ err=e; }
+  }
+  throw err||new Error('no data source');
+}
 let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicked=false, posF='all', watF='all', sigF='all', lastFetch=null, watchPicked=false;
 let posView=localStorage.getItem('cm_posview')||'eval';
 const posOpen=new Set();
@@ -471,12 +491,7 @@ const sigVisible=s=>s.type!=='bo'||(s.vol_ratio??0)>=1.0;
 // ── 데이터 로드 ──
 async function load(){
   try{
-    // ⚠ 여기에 Cache-Control/Pragma 헤더를 넣지 말 것. 두 헤더는 CORS 안전목록이 아니라
-    // 교차 출처 요청에서 OPTIONS 프리플라이트를 유발하는데, raw.githubusercontent.com 은
-    // 프리플라이트에 응답하지 않아 fetch 가 통째로 실패한다(동일 출처였을 땐 무해했음).
-    // 캐시 무력화는 ?t= 쿼리와 cache:'no-store' 로 충분하다.
-    const r=await fetch(STATE_URL+'?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
+    const r=await fetchData('/state.json');
     STATE=await r.json(); lastFetch=new Date(); renderAll(); checkNewSignals();
   }catch(e){
     console.error('state load failed',e);
@@ -646,7 +661,7 @@ async function loadChart(market,sym,mount,opts){
   chartCache.set(key,{status:'loading'});
   mount.innerHTML='<div class="chload">차트 불러오는 중…</div>';
   try{
-    const r=await fetch(`${DATA_BASE}/charts/${key}.json?t=${Date.now()}`,{cache:'no-store'});
+    const r=await fetchData('/charts/'+key+'.json');
     if(!r.ok) throw new Error('http '+r.status);
     const data=await r.json();
     chartCache.set(key,{status:'done',data}); mount.innerHTML=buildChartSVG(data,opts);
