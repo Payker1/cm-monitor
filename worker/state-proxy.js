@@ -31,7 +31,12 @@ const CORS = {
 function json(status, body) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "no-store" },
+    // charset 을 빼면 브라우저가 인코딩을 추측해 한글 메시지가 깨진다(EUC-KR 로 오독).
+    headers: {
+      ...CORS,
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
   });
 }
 
