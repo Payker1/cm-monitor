@@ -881,6 +881,12 @@ document.body.addEventListener('click',askNotif,{once:true});
 
 load();
 setInterval(load,REFRESH_MS);
+// 화면 복귀 시 즉시 1회 로드. iOS Safari 는 백그라운드에서 setInterval 을 정지·지연시켜
+// 앱을 다시 열면 다음 틱까지 묵은 값이 그대로 보인다(관측: 발행은 34초 주기인데 화면은
+// 3분 뒤처짐). pageshow 는 bfcache 복원(e.persisted)일 때만 — 최초 로드에서 위의
+// load() 와 중복되지 않게 한다.
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') load(); });
+window.addEventListener('pageshow',e=>{ if(e.persisted) load(); });
 </script>
 <script>
   if('serviceWorker' in navigator){
