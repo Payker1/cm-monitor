@@ -412,7 +412,13 @@
   <button data-t="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>이력</button>
 </nav>
 <script>
-const STATE_URL='state.json', REFRESH_MS=15000;
+// 데이터는 Pages 가 빌드하지 않는 data 브랜치에서 raw 로 직접 읽는다.
+// 같은 브랜치(main)에 30초마다 커밋하면 push 마다 Pages 재빌드가 걸리는데
+// 빌드가 38~39초라 34초 간격 push 에 계속 취소된다(실측 성공률 7% → 실제 배포는
+// 10분에 1회). 데이터를 Pages 밖으로 빼면 빌드가 경로에서 빠져 30초 신선도가
+// 그대로 도달하고, main 은 화면 코드가 바뀔 때만 재빌드된다.
+const DATA_BASE='https://raw.githubusercontent.com/Payker1/cm-monitor/data';
+const STATE_URL=DATA_BASE+'/state.json', REFRESH_MS=15000;
 let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicked=false, posF='all', watF='all', sigF='all', lastFetch=null, watchPicked=false;
 let posView=localStorage.getItem('cm_posview')||'eval';
 const posOpen=new Set();
@@ -471,7 +477,7 @@ async function load(){
   }catch(e){
     console.error('state load failed',e);
     if(!STATE) document.getElementById('homeHero').innerHTML=
-      '<div class="hero"><div class="lbl">데이터를 불러오지 못했습니다</div><div class="equity" style="font-size:17px">state.json 확인 필요</div></div>';
+      '<div class="hero"><div class="lbl">데이터를 불러오지 못했습니다</div><div class="equity" style="font-size:17px">data 브랜치 state.json 확인 필요</div></div>';
   }
 }
 function renderAll(){
@@ -636,7 +642,7 @@ async function loadChart(market,sym,mount,opts){
   chartCache.set(key,{status:'loading'});
   mount.innerHTML='<div class="chload">차트 불러오는 중…</div>';
   try{
-    const r=await fetch(`charts/${key}.json?t=${Date.now()}`,{cache:'no-store'});
+    const r=await fetch(`${DATA_BASE}/charts/${key}.json?t=${Date.now()}`,{cache:'no-store'});
     if(!r.ok) throw new Error('http '+r.status);
     const data=await r.json();
     chartCache.set(key,{status:'done',data}); mount.innerHTML=buildChartSVG(data,opts);
