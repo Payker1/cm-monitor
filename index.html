@@ -482,7 +482,10 @@ function renderAll(){
 
 // ── 업데이트 일시 + 새로고침 ──
 function stateStamp(){
-  const c=STATE&&(STATE.updated_at||STATE.generated_at||STATE.as_of||STATE.updated||STATE.ts);
+  // 데이터 생성 시각은 meta.ts. 이게 빠지면 lastFetch(=받아온 시각)로 폴백하는데,
+  // 그러면 데이터가 몇 분 묵어도 시계만 15초마다 갱신돼 '최신'처럼 보인다.
+  const m=STATE&&STATE.meta;
+  const c=(m&&m.ts)||(STATE&&(STATE.updated_at||STATE.generated_at||STATE.as_of||STATE.updated||STATE.ts));
   if(c){ const d=new Date(c); if(!isNaN(d)) return d; }
   return lastFetch;
 }
