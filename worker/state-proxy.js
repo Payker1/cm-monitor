@@ -1,5 +1,5 @@
 /**
- * state-proxy — cm-monitor 데이터 전달용 Cloudflare Worker
+ * state-proxy - cm-monitor 데이터 전달용 Cloudflare Worker
  *
  * 왜 필요한가:
  *   봇은 34초마다 data 브랜치에 state.json 을 발행하는데, 앱이
@@ -7,22 +7,27 @@
  *   raw 는 Cache-Control: max-age=300 으로 응답하고 쿼리스트링(?t=)을
  *   캐시 키에서 무시하기 때문에 캐시버스터가 통하지 않는다.
  *
- * ⚠ 여기서 raw 를 그대로 중계하면 의미가 없다. raw 의 CDN 캐시는 상류에
- *   있어서 Worker 가 요청해도 같은 묵은 응답을 받는다. 그래서 CDN 캐시가
+ * 설계 주의: 여기서 raw 를 그대로 중계하면 의미가 없다. raw 의 CDN 캐시는
+ *   상류에 있어서 Worker 가 요청해도 같은 묵은 응답을 받는다. 그래서 CDN 캐시가
  *   없는 GitHub Contents API 를 쓴다(인증 시 5,000 req/hr, 앱은 240 req/hr).
  *
- * 배포: worker/README.md 참고. GH_TOKEN 은 Secret 으로만 넣는다(코드에 두지 말 것).
+ * 코드 주의: 이 파일에는 백틱(template literal)을 쓰지 않는다. 모바일에서
+ *   붙여넣을 때 백틱이 일반 따옴표로 바뀌어 ${...} 가 치환되지 않는 사고가
+ *   실제로 발생했다(URL 과 Authorization 헤더가 통째로 문자열이 되어 404).
+ *   문자열은 전부 + 로 잇는다.
+ *
+ * 배포: worker/README.md 참고. GH_TOKEN 은 Secret 으로만 넣는다.
  */
 
-const REPO = "Payker1/cm-monitor";
-const BRANCH = "data";
+var REPO = "Payker1/cm-monitor";
+var BRANCH = "data";
 
-// 중계 허용 경로만 화이트리스트 — 공개 프록시가 임의 파일을 읽어주지 않게.
+// 중계 허용 경로만 화이트리스트 - 공개 프록시가 임의 파일을 읽어주지 않게.
 function allowed(path) {
   return path === "state.json" || /^charts\/[A-Za-z0-9_.\-]+\.json$/.test(path);
 }
 
-const CORS = {
+var CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Max-Age": "86400",
@@ -30,43 +35,54 @@ const CORS = {
 
 function json(status, body) {
   return new Response(JSON.stringify(body), {
-    status,
-    // charset 을 빼면 브라우저가 인코딩을 추측해 한글 메시지가 깨진다(EUC-KR 로 오독).
-    headers: {
-      ...CORS,
+    status: status,
+    headers: Object.assign({}, CORS, {
+      // charset 을 빼면 브라우저가 인코딩을 추측해 한글 메시지가 깨진다.
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-    },
+    }),
   });
 }
 
 export default {
   async fetch(request, env) {
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
-    if (request.method !== "GET") return json(405, { error: "method not allowed" });
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS });
+    }
+    if (request.method !== "GET") {
+      return json(405, { error: "method not allowed" });
+    }
 
     // 경로 정규화: "/" 는 state.json 으로. ?t= 캐시버스터는 무시하고 버린다.
-    const path = new URL(request.url).pathname.replace(/^\/+/, "") || "state.json";
-    if (!allowed(path)) return json(404, { error: "not found" });
+    var path = new URL(request.url).pathname.replace(/^\/+/, "") || "state.json";
+    if (!allowed(path)) return json(404, { error: "not found: " + path });
 
     if (!env.GH_TOKEN) return json(500, { error: "GH_TOKEN secret 미설정" });
 
-    let upstream;
+    var api =
+      "https://api.github.com/repos/" + REPO + "/contents/" + path + "?ref=" + BRANCH;
+
+    // 붙여넣기 사고 자가진단: 치환이 안 됐으면 즉시 알려준다.
+    if (api.indexOf("${") !== -1) {
+      return json(500, {
+        error: "코드 붙여넣기 손상: 백틱이 따옴표로 바뀌어 치환이 안 됨",
+        url: api,
+      });
+    }
+
+    var upstream;
     try {
-      upstream = await fetch(
-        `https://api.github.com/repos/${REPO}/contents/${path}?ref=${BRANCH}`,
-        {
-          headers: {
-            Authorization: `Bearer ${env.GH_TOKEN}`,
-            // raw 미디어 타입 → base64 가 아니라 파일 내용을 그대로 받는다.
-            Accept: "application/vnd.github.raw",
-            "User-Agent": "cm-monitor-state-proxy",
-          },
-          // Cloudflare 쪽 캐시도 끈다. GitHub API 는 Cache-Control: private 라
-          // 원래 공유 캐시에 저장되지 않지만, 이중으로 막아둔다.
-          cf: { cacheTtl: 0, cacheEverything: false },
-        }
-      );
+      upstream = await fetch(api, {
+        headers: {
+          Authorization: "Bearer " + env.GH_TOKEN,
+          // raw 미디어 타입 -> base64 가 아니라 파일 내용을 그대로 받는다.
+          Accept: "application/vnd.github.raw",
+          "User-Agent": "cm-monitor-state-proxy",
+        },
+        // Cloudflare 쪽 캐시도 끈다. GitHub API 는 Cache-Control: private 라
+        // 원래 공유 캐시에 저장되지 않지만, 이중으로 막아둔다.
+        cf: { cacheTtl: 0, cacheEverything: false },
+      });
     } catch (e) {
       return json(502, { error: "upstream fetch 실패", detail: String(e) });
     }
@@ -74,21 +90,26 @@ export default {
     if (!upstream.ok) {
       // 레이트리밋 잔량을 그대로 노출해 진단할 수 있게 한다.
       return json(upstream.status === 404 ? 404 : 502, {
-        error: `GitHub API ${upstream.status}`,
+        error: "GitHub API " + upstream.status,
+        hint:
+          upstream.status === 401
+            ? "GH_TOKEN 값이 틀렸거나 만료됨"
+            : upstream.status === 404
+            ? "토큰 권한에 cm-monitor 가 없거나 경로/브랜치가 틀림"
+            : "",
+        url: api,
         rate_remaining: upstream.headers.get("x-ratelimit-remaining"),
-        rate_reset: upstream.headers.get("x-ratelimit-reset"),
       });
     }
 
     return new Response(upstream.body, {
       status: 200,
-      headers: {
-        ...CORS,
+      headers: Object.assign({}, CORS, {
         "Content-Type": "application/json; charset=utf-8",
-        // 브라우저·중간 캐시 모두 저장 금지 — 이게 이 Worker 의 존재 이유다.
+        // 브라우저·중간 캐시 모두 저장 금지 - 이게 이 Worker 의 존재 이유다.
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "X-Rate-Remaining": upstream.headers.get("x-ratelimit-remaining") || "",
-      },
+      }),
     });
   },
 };
