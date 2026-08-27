@@ -142,6 +142,10 @@
     padding:2px 6px;border-radius:5px;border:1px solid;}
   .rs.hi{color:var(--green);border-color:rgba(31,209,122,.4);background:var(--green-bg);}
   .rs.mid{color:var(--amber);border-color:rgba(255,176,32,.4);background:var(--amber-bg);}
+  /* 섹터 태그 — RS 배지와 같은 치수, 색은 중립(정보 위계상 RS 보다 낮음) */
+  .sect{font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:5px;
+    color:var(--txt-dim);border:1px solid var(--line);background:transparent;
+    white-space:nowrap;}
   .rs.lo{color:var(--txt-faint);border-color:var(--line);background:var(--panel-2);}
   .witem .l .pv{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);margin-top:3px;display:flex;white-space:nowrap;overflow:hidden;}
   .witem .l .pv .pvname{overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
@@ -487,6 +491,8 @@ const mainNm=o=>o.market==='KR'?esc(o.name||o.sym):esc(o.sym);
 const subNm=o=>o.market==='KR'?esc(o.sym):esc(o.name||'');
 // 피벗 돌파(bo) 시그널은 거래량 배수 ≥ 1.0 인 것만 노출
 const sigVisible=s=>s.type!=='bo'||(s.vol_ratio??0)>=1.0;
+// 섹터 태그 — 값이 없으면 빈 문자열(태그 자체를 안 그린다)
+const sectTag=v=>v?`<span class="sect">${esc(v)}</span>`:'';
 
 // ── 데이터 로드 ──
 async function load(){
@@ -616,10 +622,11 @@ function posExp(p,view){
     qty:p.qty!=null?`수량 <b>${maskQty(p.qty)}</b>`:'',
     eval:p.eval_amount!=null?`평가 <b>${maskAmt(p.eval_amount)}</b>`:'',
     rs:p.rs!=null?`RS <b>${p.rs}</b>`:'',
+    sector:p.sector?`<b>${esc(p.sector)}</b>`:'',
     pl:`수익 <b>${maskSignWon(p.pl_krw)}</b>`,
     plpct:`수익률 <b>${signPct(p.pl_pct)}</b>`
   };
-  const order=view==='price'?['pl','plpct','hold','qty','eval','rs']:['entry','current','hold','rs'];
+  const order=view==='price'?['pl','plpct','hold','qty','eval','rs','sector']:['entry','current','hold','rs','sector'];
   return order.map(k=>all[k]).filter(Boolean).map(x=>`<span class="m">${x}</span>`).join('');
 }
 // ── 종목 차트 (일봉 3개월 + 이평선 5종) ──
@@ -729,7 +736,7 @@ function renderWatch(){
       const pdTxt=(_pd!=null&&(key==='breakout'||key==='pivot_near'||key==='basing'))?` (${_pd>=0?'+':''}${_pd.toFixed(1)}%)`:'';
       const ck=`${w.market}_${w.sym}`, hasCh=!!w.has_chart, wopen=watchOpen.has(ck)?'open':'';
       return `<div class="witem ${hasCh?'hasch':''} ${wopen}" data-ck="${ck}" data-mk="${w.market}" data-sym="${esc(w.sym)}">
-        <div class="wtop"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.is_new?'<span class="newb">NEW</span>':''}${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}</div>
+        <div class="wtop"><div class="l"><div class="symrow"><div class="sym">${main}</div>${w.is_new?'<span class="newb">NEW</span>':''}${w.rs!=null?`<span class="rs ${rsCls(w.rs)}">RS ${w.rs}</span>`:''}${sectTag(w.sector)}</div>
         <div class="pv">${sub?`<span class="pvname">${sub}</span><span class="pvfix"> · ${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`:`<span class="pvfix">${w.pivot!=null?`피벗 ${px(w.pivot,w.market)}${pdTxt}`:''}${volTxt}</span>`}</div></div>
         <div class="r"><div class="px">${px(w.price,w.market)}</div><div class="d ${dCls}" ${key==='basing'?'style="color:var(--txt-faint)"':''}>${dTxt}</div></div></div>
         ${hasCh?`<div class="wexp"><div class="chart" data-mk="${w.market}" data-sym="${esc(w.sym)}"></div></div>`:''}</div>`;
@@ -842,7 +849,7 @@ function renderMarket(mkt){
   const isKR=mkt==='kr';
   document.getElementById('leadList').innerHTML=leaders.length?leaders.map(l=>{
     const main=isKR?esc(l.name||l.sym):esc(l.sym), sub=isKR?esc(l.sym):esc(l.name||'');
-    return `<div class="lead"><div class="l"><div class="sym">${main}${ownBadge(l.sym)} <span class="rs ${rsCls(l.rs)}" style="margin-left:4px">RS ${l.rs}</span></div><div class="sub">${sub}</div></div>
+    return `<div class="lead"><div class="l"><div class="sym">${main}${ownBadge(l.sym)} <span class="rs ${rsCls(l.rs)}" style="margin-left:4px">RS ${l.rs}</span></div><div class="sub">${sub}${l.sector?' · '+esc(l.sector):''}</div></div>
      <div class="r"><div class="vol">${fmtTV(l.value,mkt)}</div><div class="vollbl">거래대금</div></div></div>`;
   }).join(''):emptyMsg('데이터 없음');
   const ck=document.getElementById('cardKR'),cu=document.getElementById('cardUS');
@@ -856,7 +863,7 @@ function renderRank(){
   const isKR=curMarket==='kr';
   document.getElementById('rankList').innerHTML=arr.length?arr.map((r,i)=>{
     const main=isKR?esc(r.name||r.sym):esc(r.sym), sub=isKR?esc(r.sym):esc(r.name||'');
-    return `<div class="rk"><span class="no">${i+1}</span><div class="info"><div class="nm">${main}${ownBadge(r.sym)}</div><div class="sub">${sub}</div></div>`+
+    return `<div class="rk"><span class="no">${i+1}</span><div class="info"><div class="nm">${main}${ownBadge(r.sym)}</div><div class="sub">${sub}${r.sector?' · '+esc(r.sector):''}</div></div>`+
     (sheetKey==='vol'?`<div class="metric">${fmtTV(r.value,curMarket)}<div class="sub" style="text-align:right">RS ${r.rs}</div></div>`
       :`<div class="metric rs">RS ${r.rs}<div class="sub" style="text-align:right">${fmtTV(r.value,curMarket)}</div></div>`)+`</div>`;
   }).join(''):emptyMsg('데이터 없음');
