@@ -128,6 +128,31 @@
   .viewseg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px;gap:2px;flex:none;}
   .viewseg button{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:0;color:var(--txt-faint);background:none;border:none;border-radius:999px;padding:4px 11px;cursor:pointer;transition:all .16s;text-transform:none;}
   .viewseg button.von{background:var(--green-bg);color:var(--green);}
+  /* ── 보유 트리맵 ──
+     면적=평가금액(크기), 색=당일 등락률(발산형: 빨강←중립→초록), 현금=회색.
+     발산 램프는 앱 토큰(--green/--red)을 패널 위에 알파 합성해 만든 값이라 테마와 붙어 있다.
+     알파 상한은 '타일 위 흰/검 글자 4.5:1' 을 만족하는 지점에서 끊었다(다크 .54/라이트 .72).
+     중립 근처에서 양극이 수렴하는 건 발산형의 정의라, 타일마다 부호 붙은 숫자를 찍어
+     색만으로 판단하지 않게 한다(적록색약 시 양극 ΔE 4~6). */
+  .tmap{position:relative;width:100%;aspect-ratio:1/1;max-height:420px;border-radius:14px;overflow:hidden;
+    border:1px solid var(--line);background:var(--panel);}
+  .tmap .cell{position:absolute;overflow:hidden;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:1px;
+    border-radius:6px;padding:2px;cursor:pointer;transition:filter .14s;}
+  .tmap .cell:hover,.tmap .cell:focus-visible{filter:brightness(1.14);outline:none;}
+  .tmap .cell .s{font-family:'JetBrains Mono';font-weight:800;color:#fff;line-height:1.05;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tmap .cell .d{font-family:'JetBrains Mono';font-weight:700;color:#fff;opacity:.92;line-height:1.05;}
+  body.light .tmap .cell .s,body.light .tmap .cell .d{color:#1a1d21;}
+  .tmap .cell.tiny .d{display:none;}
+  .tmap .cell.micro .s{display:none;}
+  .tmtip{position:absolute;z-index:5;pointer-events:none;background:var(--bar-bg);
+    border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-family:'JetBrains Mono';
+    font-size:10.5px;line-height:1.5;color:var(--txt);white-space:nowrap;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);}
+  .tmleg{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;
+    font-family:'JetBrains Mono';font-size:9.5px;color:var(--txt-faint);}
+  .tmleg i{display:inline-block;width:15px;height:9px;border-radius:2px;}
   .green{color:var(--green);}.red{color:var(--red);}.amber{color:var(--amber);}.purple{color:var(--purple);}
   .wgroup{margin-bottom:16px;}
   .wghead{display:flex;align-items:center;gap:8px;margin:2px 2px 9px;}
@@ -345,7 +370,7 @@
 </section>
 
 <section class="page" id="positions">
-  <div class="sec-label labelrow"><span id="posSortLabel">보유 종목 · 총 수익률 높은 순</span><div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button></div></div>
+  <div class="sec-label labelrow"><span id="posSortLabel">보유 종목 · 총 수익률 높은 순</span><div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button><button data-v="tree">트리맵</button></div></div>
   <div class="filterrow rowtop"><div class="seg" id="segPos"><button class="chip on" data-m="all">전체</button><button class="chip" data-m="KR">KR</button><button class="chip" data-m="US">US</button></div><div class="updcluster"><span class="upd-t" id="updPos">—</span><button class="refbtn" id="refPos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v4h-4"/></svg>새로고침</button></div></div>
   <div id="posList"></div>
 </section>
@@ -469,6 +494,8 @@ document.getElementById('themeToggle').addEventListener('click',()=>{
   const dark=!document.body.classList.contains('light');
   document.querySelector('meta[name=theme-color]').setAttribute('content',dark?'#0b1416':'#f5f6f8');
   localStorage.setItem('cm_theme',dark?'dark':'light');
+  // 트리맵 색은 테마별 램프에서 뽑아 인라인 style 로 박히므로 클래스 토글만으론 안 바뀐다.
+  if(typeof STATE!=='undefined'&&STATE) renderPositions();
 });
 
 // ── 포맷 헬퍼 ──
@@ -681,13 +708,126 @@ async function loadChart(market,sym,mount,opts){
 }
 function mountChart(m){ if(!m)return; const avg=(m.dataset.avg!=null&&m.dataset.avg!=='')?parseFloat(m.dataset.avg):null; loadChart(m.dataset.mk,m.dataset.sym,m,{avg}); }
 function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(mountChart); }
+
+// ── 보유 트리맵 ───────────────────────────────────────────────
+// 면적=평가금액, 색=당일 등락률(발산형), 현금=회색. 미장은 알파벳 티커로 표기.
+// 색 단계는 앱 토큰을 패널 위에 알파 합성한 값(다크 .16/.287/.413/.54, 라이트 .24/.4/.56/.72).
+// 상한은 타일 위 글자 대비 4.5:1 을 만족하는 지점이다.
+const TM_GREEN={dark:['#143e33','#16543d','#176a48','#198153'],
+                light:['#c6e5d7','#a0d3bd','#7ac2a3','#54b188']};
+const TM_RED  ={dark:['#38292e','#562e35','#74343d','#923944'],
+                light:['#f4ccd0','#edaab0','#e58891','#de6671']};
+const TM_CASH ={dark:'#243336', light:'#ebecee'};
+// 등락률 → 단계. 임계는 하루 변동 체감에 맞춘 0.5 / 1.5 / 3.0%.
+const tmStep=v=>{const a=Math.abs(v); return a<0.5?0:a<1.5?1:a<3?2:3;};
+function tmColor(d){
+  const mode=document.body.classList.contains('light')?'light':'dark';
+  if(d==null) return TM_CASH[mode];
+  return (d>=0?TM_GREEN:TM_RED)[mode][tmStep(d)];
+}
+// squarified treemap — 타일이 정사각형에 가깝게 배치되도록 행 단위로 나눈다.
+function tmLayout(items,x,y,w,h,out){
+  if(!items.length) return out;
+  if(items.length===1){ out.push({...items[0],x,y,w,h}); return out; }
+  const total=items.reduce((s,i)=>s+i.v,0);
+  const horiz=w>=h, side=horiz?h:w;
+  const worst=(row,len)=>{ if(!row.length) return Infinity;
+    const sum=row.reduce((s,i)=>s+i.v,0), mx=Math.max(...row.map(i=>i.v)), mn=Math.min(...row.map(i=>i.v));
+    const sc=len*len; return Math.max(sc*mx/(sum*sum), (sum*sum)/(sc*mn)); };
+  let row=[], rest=[...items], len=side;
+  while(rest.length){
+    const cand=[...row,rest[0]];
+    const sum=row.reduce((s,i)=>s+i.v,0), sumC=sum+rest[0].v;
+    const l1=(sum/total)*(horiz?w:h), l2=(sumC/total)*(horiz?w:h);
+    if(!row.length || worst(cand,side)<=worst(row,side)){ row=cand; rest.shift(); len=l2; }
+    else { len=l1; break; }
+  }
+  const rowSum=row.reduce((s,i)=>s+i.v,0), thick=(rowSum/total)*(horiz?w:h);
+  let off=0;
+  row.forEach(i=>{ const frac=i.v/rowSum;
+    if(horiz) { out.push({...i,x,y:y+off,w:thick,h:h*frac}); off+=h*frac; }
+    else      { out.push({...i,x:x+off,y,w:w*frac,h:thick}); off+=w*frac; } });
+  const rr=items.slice(row.length);
+  if(rr.length) horiz?tmLayout(rr,x+thick,y,w-thick,h,out):tmLayout(rr,x,y+thick,w,h-thick,out);
+  return out;
+}
+function renderTreemap(ps){
+  const cash=Math.max(0,+((STATE.account||{}).cash_krw)||0);
+  const items=ps.filter(p=>(p.eval_amount||0)>0).map(p=>({
+    key:p.sym, label:p.market==='US'?p.sym:(p.name||p.sym),   // 미장은 알파벳 티커
+    v:p.eval_amount, d:(p.change_pct!=null?p.change_pct:null), market:p.market, cash:false }));
+  if(cash>0) items.push({key:'__cash__',label:'현금',v:cash,d:null,cash:true});
+  if(!items.length) return emptyMsg('보유 종목 없음');
+  items.sort((a,b)=>b.v-a.v);
+  const W=1000,H=1000;
+  const cells=tmLayout(items,0,0,W,H,[]);
+  const tot=items.reduce((s,i)=>s+i.v,0);
+  const body=cells.map(c=>{
+    const pw=c.w/W*100, ph=c.h/H*100;
+    const area=Math.min(c.w,c.h);
+    const cls=area<58?'micro':(area<96?'tiny':'');
+    const fs=Math.max(8,Math.min(15,area/5.2)).toFixed(1);
+    const ds=Math.max(7.5,Math.min(12,area/7)).toFixed(1);
+    const dtxt=c.cash?'':signPct(c.d==null?0:c.d);
+    return `<div class="cell ${cls}" tabindex="0" style="left:${(c.x/W*100).toFixed(3)}%;top:${(c.y/H*100).toFixed(3)}%;`
+      +`width:calc(${pw.toFixed(3)}% - 2px);height:calc(${ph.toFixed(3)}% - 2px);margin:1px;background:${tmColor(c.cash?null:c.d)}" `
+      +`data-l="${esc(c.label)}" data-v="${c.v}" data-d="${c.cash?'':(c.d==null?'':c.d)}" data-p="${(c.v/tot*100).toFixed(1)}">`
+      +`<span class="s" style="font-size:${fs}px">${esc(c.label)}</span>`
+      +(dtxt?`<span class="d" style="font-size:${ds}px">${dtxt}</span>`:'')+`</div>`;
+  }).join('');
+  const mode=document.body.classList.contains('light')?'light':'dark';
+  const leg=`<div class="tmleg"><span>하락</span>`
+    +TM_RED[mode].slice().reverse().map(c=>`<i style="background:${c}"></i>`).join('')
+    +`<i style="background:${TM_CASH[mode]}"></i>`
+    +TM_GREEN[mode].map(c=>`<i style="background:${c}"></i>`).join('')
+    +`<span>상승</span><span style="margin-left:6px">· 회색=현금</span></div>`;
+  return `<div class="tmap" id="tmap">${body}</div>${leg}`;
+}
+// 타일 hover/focus 시 상세 — 면적만으로는 금액을 읽을 수 없으므로 붙인다.
+function hydrateTreemap(){
+  const box=document.getElementById('tmap'); if(!box) return;
+  let tip=null;
+  const hide=()=>{ if(tip){tip.remove(); tip=null;} };
+  const show=(el)=>{
+    hide();
+    const d=el.dataset.d===''?null:+el.dataset.d;
+    tip=document.createElement('div'); tip.className='tmtip';
+    tip.innerHTML=`<b>${esc(el.dataset.l)}</b><br>${maskWon(+el.dataset.v)} · ${el.dataset.p}%`
+      +(d==null?'':`<br>당일 ${signPct(d)}`);
+    box.appendChild(tip);
+    const br=box.getBoundingClientRect(), er=el.getBoundingClientRect(), tr=tip.getBoundingClientRect();
+    let L=er.left-br.left+er.width/2-tr.width/2, T=er.top-br.top-tr.height-6;
+    if(T<2) T=er.top-br.top+er.height+6;
+    tip.style.left=Math.max(2,Math.min(L,br.width-tr.width-2))+'px'; tip.style.top=T+'px';
+  };
+  box.querySelectorAll('.cell').forEach(el=>{
+    el.addEventListener('mouseenter',()=>show(el));
+    el.addEventListener('focus',()=>show(el));
+    el.addEventListener('mouseleave',hide);
+    el.addEventListener('blur',hide);
+    el.addEventListener('click',()=>show(el));   // 터치 기기
+  });
+  box.addEventListener('mouseleave',hide);
+}
 function renderPositions(){
   const view=posView;
   const dchg=p=>(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
   const ps=fm(STATE.positions,posF).slice().sort(view==='price'
     ? (a,b)=>((dchg(b)==null?-1e9:dchg(b))-(dchg(a)==null?-1e9:dchg(a)))
     : (a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
-  const lbl=document.getElementById('posSortLabel'); if(lbl) lbl.textContent=view==='price'?'보유 종목 · 일간 수익률 높은 순':'보유 종목 · 총 수익률 높은 순';
+  const lbl=document.getElementById('posSortLabel');
+  if(lbl) lbl.textContent=view==='tree'?'보유 종목 · 비중 트리맵'
+    :(view==='price'?'보유 종목 · 일간 수익률 높은 순':'보유 종목 · 총 수익률 높은 순');
+  if(view==='tree'){
+    // 트리맵은 카드 목록 대신 통째로 그린다(요약 헤더는 유지 — 총 평가금액 맥락).
+    const sumEvalT=ps.reduce((s,p)=>s+(p.eval_amount||0),0);
+    const sumPlT=ps.reduce((s,p)=>s+(p.pl_krw||0),0);
+    const sumCostT=sumEvalT-sumPlT, sumPctT=sumCostT>0?(sumPlT/sumCostT*100):0, scT=sumPlT>=0?'green':'red';
+    const head=ps.length?`<div class="possum"><div class="ps-l"><div class="ps-k">보유 ${ps.length}종목 · 총 평가금액</div><div class="ps-v">${maskWon(sumEvalT)}</div></div><div class="ps-r"><div class="ps-pct ${scT}">${signPct(sumPctT)}</div><div class="ps-amt ${scT}">${maskSignWon(sumPlT)}</div></div></div>`:'';
+    document.getElementById('posList').innerHTML=head+renderTreemap(ps);
+    hydrateTreemap();
+    return;
+  }
   const sumEval=ps.reduce((s,p)=>s+(p.eval_amount||0),0);
   const sumPl=ps.reduce((s,p)=>s+(p.pl_krw||0),0);
   const sumCost=sumEval-sumPl, sumPct=sumCost>0?(sumPl/sumCost*100):0, sc=sumPl>=0?'green':'red';
