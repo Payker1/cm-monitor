@@ -128,7 +128,10 @@
   .viewseg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px;gap:2px;flex:none;}
   .viewseg button{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:0;color:var(--txt-faint);background:none;border:none;border-radius:999px;padding:4px 11px;cursor:pointer;transition:all .16s;text-transform:none;}
   .viewseg button.von{background:var(--green-bg);color:var(--green);}
-  /* ── 보유 트리맵 ──
+  /* ── 보유 히트맵 ──
+     화면 명칭은 '히트맵' — 증권사 HTS·Finviz 계열에서 이 화면을 그렇게 부른다.
+     내부 식별자(tmap/renderTreemap/tmLayout)는 알고리즘 이름인 treemap 을 유지한다.
+     data-v='tree' 도 그대로 둔다 — localStorage(cm_posview)에 저장된 기존 선택을 깨지 않기 위함.
      면적=평가금액(크기), 색=당일 등락률(발산형: 빨강←중립→초록), 현금=회색.
      발산 램프는 앱 토큰(--green/--red)을 패널 위에 알파 합성해 만든 값이라 테마와 붙어 있다.
      알파 상한은 '타일 위 흰/검 글자 4.5:1' 을 만족하는 지점에서 끊었다(다크 .54/라이트 .72).
@@ -370,7 +373,7 @@
 </section>
 
 <section class="page" id="positions">
-  <div class="sec-label labelrow"><span id="posSortLabel">보유 종목 · 총 수익률 높은 순</span><div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button><button data-v="tree">트리맵</button></div></div>
+  <div class="sec-label labelrow"><span id="posSortLabel">보유 종목 · 총 수익률 높은 순</span><div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button><button data-v="tree">히트맵</button></div></div>
   <div class="filterrow rowtop"><div class="seg" id="segPos"><button class="chip on" data-m="all">전체</button><button class="chip" data-m="KR">KR</button><button class="chip" data-m="US">US</button></div><div class="updcluster"><span class="upd-t" id="updPos">—</span><button class="refbtn" id="refPos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v4h-4"/></svg>새로고침</button></div></div>
   <div id="posList"></div>
 </section>
@@ -494,7 +497,7 @@ document.getElementById('themeToggle').addEventListener('click',()=>{
   const dark=!document.body.classList.contains('light');
   document.querySelector('meta[name=theme-color]').setAttribute('content',dark?'#0b1416':'#f5f6f8');
   localStorage.setItem('cm_theme',dark?'dark':'light');
-  // 트리맵 색은 테마별 램프에서 뽑아 인라인 style 로 박히므로 클래스 토글만으론 안 바뀐다.
+  // 히트맵 색은 테마별 램프에서 뽑아 인라인 style 로 박히므로 클래스 토글만으론 안 바뀐다.
   if(typeof STATE!=='undefined'&&STATE) renderPositions();
 });
 
@@ -709,7 +712,7 @@ async function loadChart(market,sym,mount,opts){
 function mountChart(m){ if(!m)return; const avg=(m.dataset.avg!=null&&m.dataset.avg!=='')?parseFloat(m.dataset.avg):null; loadChart(m.dataset.mk,m.dataset.sym,m,{avg}); }
 function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(mountChart); }
 
-// ── 보유 트리맵 ───────────────────────────────────────────────
+// ── 보유 히트맵(구현은 squarified treemap) ──────────────────────
 // 면적=평가금액, 색=당일 등락률(발산형), 현금=회색. 미장은 알파벳 티커로 표기.
 // 색 단계는 앱 토큰을 패널 위에 알파 합성한 값(다크 .16/.287/.413/.54, 라이트 .24/.4/.56/.72).
 // 상한은 타일 위 글자 대비 4.5:1 을 만족하는 지점이다.
@@ -756,7 +759,7 @@ function renderTreemap(ps){
   const items=ps.filter(p=>(p.eval_amount||0)>0).map(p=>({
     key:p.sym, label:p.market==='US'?p.sym:(p.name||p.sym),   // 미장은 알파벳 티커
     v:p.eval_amount, d:(p.change_pct!=null?p.change_pct:null), market:p.market, cash:false }));
-  if(cash>0) items.push({key:'__cash__',label:'현금',v:cash,d:null,cash:true});
+  if(cash>0) items.push({key:'__cash__',label:'CASH',v:cash,d:null,cash:true});
   if(!items.length) return emptyMsg('보유 종목 없음');
   items.sort((a,b)=>b.v-a.v);
   const W=1000,H=1000;
@@ -780,7 +783,7 @@ function renderTreemap(ps){
     +TM_RED[mode].slice().reverse().map(c=>`<i style="background:${c}"></i>`).join('')
     +`<i style="background:${TM_CASH[mode]}"></i>`
     +TM_GREEN[mode].map(c=>`<i style="background:${c}"></i>`).join('')
-    +`<span>상승</span><span style="margin-left:6px">· 회색=현금</span></div>`;
+    +`<span>상승</span><span style="margin-left:6px">· 회색=CASH</span></div>`;
   return `<div class="tmap" id="tmap">${body}</div>${leg}`;
 }
 // 타일 hover/focus 시 상세 — 면적만으로는 금액을 읽을 수 없으므로 붙인다.
@@ -816,10 +819,10 @@ function renderPositions(){
     ? (a,b)=>((dchg(b)==null?-1e9:dchg(b))-(dchg(a)==null?-1e9:dchg(a)))
     : (a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
   const lbl=document.getElementById('posSortLabel');
-  if(lbl) lbl.textContent=view==='tree'?'보유 종목 · 비중 트리맵'
+  if(lbl) lbl.textContent=view==='tree'?'보유 종목 · 비중 히트맵'
     :(view==='price'?'보유 종목 · 일간 수익률 높은 순':'보유 종목 · 총 수익률 높은 순');
   if(view==='tree'){
-    // 트리맵은 카드 목록 대신 통째로 그린다(요약 헤더는 유지 — 총 평가금액 맥락).
+    // 히트맵은 카드 목록 대신 통째로 그린다(요약 헤더는 유지 — 총 평가금액 맥락).
     const sumEvalT=ps.reduce((s,p)=>s+(p.eval_amount||0),0);
     const sumPlT=ps.reduce((s,p)=>s+(p.pl_krw||0),0);
     const sumCostT=sumEvalT-sumPlT, sumPctT=sumCostT>0?(sumPlT/sumCostT*100):0, scT=sumPlT>=0?'green':'red';
