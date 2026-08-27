@@ -744,29 +744,66 @@ function tmColor(d){
   return (d>=0?TM_GREEN:TM_RED)[mode][tmStep(d)];
 }
 // squarified treemap — 타일이 정사각형에 가깝게 배치되도록 행 단위로 나눈다.
-function tmLayout(items,x,y,w,h,out){
+// 타일 목표 가로세로비 — 각 타일이 이 비율에 가깝게 나오도록 행을 끊는다.
+// 표준 squarified 는 1:1(정사각형)을 목표로 하는데, 그러면 종목 수가 적을 때
+// 얇은 막대가 나온다(관측: 보유 1종목일 때 FCX 가 세로 막대).
+const TM_ASPECT=4/3;
+// 목표비 대비 이탈 배수(1 이면 정확히 목표비)
+const tmDev=(w,h)=>{ if(w<=0||h<=0) return Infinity; const a=w/h;
+  return Math.max(a/TM_ASPECT, TM_ASPECT/a); };
+// 한 단계 분할. forceH 가 주어지면 그 방향으로, 아니면 표준 규칙(짧은 변)을 따른다.
+//   horiz=true  : 폭 thick 의 세로 띠 — 타일이 위아래로 쌓인다
+//   horiz=false : 높이 thick 의 가로 띠 — 타일이 좌우로 놓인다
+function tmSplit(items,x,y,w,h,out,forceH){
   if(!items.length) return out;
   if(items.length===1){ out.push({...items[0],x,y,w,h}); return out; }
   const total=items.reduce((s,i)=>s+i.v,0);
-  const horiz=w>=h, side=horiz?h:w;
-  const worst=(row,len)=>{ if(!row.length) return Infinity;
-    const sum=row.reduce((s,i)=>s+i.v,0), mx=Math.max(...row.map(i=>i.v)), mn=Math.min(...row.map(i=>i.v));
-    const sc=len*len; return Math.max(sc*mx/(sum*sum), (sum*sum)/(sc*mn)); };
-  let row=[], rest=[...items], len=side;
+  const horiz=(forceH===undefined)?(w>=h):forceH;
+  const side=horiz?h:w, span=horiz?w:h;
+  // 행에 담긴 타일들의 최악 이탈. 실제 폭·높이를 만들어 재므로 목표비가 1 이 아니어도
+  // 된다(표준 squarified 공식은 1:1 전용이라 4:3 을 표현할 수 없다).
+  const worst=(row)=>{
+    const S=row.reduce((s,i)=>s+i.v,0);
+    if(!S) return Infinity;
+    const t=(S/total)*span;
+    let bad=1;
+    for(const it of row){
+      const l=side*(it.v/S);
+      bad=Math.max(bad, tmDev(horiz?t:l, horiz?l:t));
+    }
+    return bad;
+  };
+  let row=[], rest=[...items];
   while(rest.length){
     const cand=[...row,rest[0]];
-    const sum=row.reduce((s,i)=>s+i.v,0), sumC=sum+rest[0].v;
-    const l1=(sum/total)*(horiz?w:h), l2=(sumC/total)*(horiz?w:h);
-    if(!row.length || worst(cand,side)<=worst(row,side)){ row=cand; rest.shift(); len=l2; }
-    else { len=l1; break; }
+    if(!row.length || worst(cand)<=worst(row)){ row=cand; rest.shift(); }
+    else break;
   }
-  const rowSum=row.reduce((s,i)=>s+i.v,0), thick=(rowSum/total)*(horiz?w:h);
+  const S=row.reduce((s,i)=>s+i.v,0), thick=(S/total)*span;
   let off=0;
-  row.forEach(i=>{ const frac=i.v/rowSum;
-    if(horiz) { out.push({...i,x,y:y+off,w:thick,h:h*frac}); off+=h*frac; }
-    else      { out.push({...i,x:x+off,y,w:w*frac,h:thick}); off+=w*frac; } });
+  row.forEach(i=>{ const l=side*(i.v/S);
+    if(horiz) out.push({...i,x,y:y+off,w:thick,h:l});
+    else      out.push({...i,x:x+off,y,w:l,h:thick});
+    off+=l; });
   const rr=items.slice(row.length);
-  if(rr.length) horiz?tmLayout(rr,x+thick,y,w-thick,h,out):tmLayout(rr,x,y+thick,w,h-thick,out);
+  if(rr.length) horiz?tmSplit(rr,x+thick,y,w-thick,h,out):tmSplit(rr,x,y+thick,w,h-thick,out);
+  return out;
+}
+function tmLayout(items,x,y,w,h,out){
+  // 최상위 분할만 두 방향을 다 재보고 고른다. 매 단계에서 고르면 그 단계는 좋아져도
+  // 남는 영역이 나빠져 전체가 악화된다(실측: 5종목 최악 ×1.9 → ×6.7).
+  // 안쪽은 표준 규칙(짧은 변)을 쓴다 — 전역적으로 가장 안정적이다.
+  if(items.length<2) return tmSplit(items,x,y,w,h,out);
+  const score=(cells)=>{
+    let bad=1, worstCell=null;
+    for(const c of cells){ const d=tmDev(c.w,c.h); if(d>bad){ bad=d; worstCell=c; } }
+    return {bad, wide: worstCell? worstCell.w>=worstCell.h : true};
+  };
+  const A=tmSplit(items,x,y,w,h,[],true),  sa=score(A);
+  const B=tmSplit(items,x,y,w,h,[],false), sb=score(B);
+  // 이탈이 같으면 '최악 타일이 가로로 눕는' 쪽 — 라벨이 가로쓰기라 그쪽이 읽힌다.
+  const pick=(sb.bad<sa.bad-1e-9)?B:(sa.bad<sb.bad-1e-9)?A:(sa.wide?A:B);
+  pick.forEach(c=>out.push(c));
   return out;
 }
 function renderTreemap(ps){
