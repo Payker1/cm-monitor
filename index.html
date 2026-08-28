@@ -494,6 +494,11 @@ btns.forEach(b=>b.addEventListener('click',()=>{
   b.classList.add('active');
   document.getElementById(b.dataset.t).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
+  // 히트맵(posView==='tree')은 글자 크기를 실제 렌더 픽셀로 재서 정한다(tmFit).
+  // 이 탭이 display:none 인 동안 데이터가 갱신돼 그때 그려졌다면 폭/높이가 0으로
+  // 측정돼 종목명이 전부 숨김 처리된 채 남는다 — 탭이 실제로 보이는 지금
+  // 다시 그려 정확한 크기로 재측정한다.
+  if(b.dataset.t==='positions'&&posView==='tree'&&typeof STATE!=='undefined'&&STATE) renderPositions();
 }));
 
 // ── 테마 토글 ──
