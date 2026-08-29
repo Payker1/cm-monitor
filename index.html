@@ -902,12 +902,15 @@ function hydrateTreemap(){
   if(!window.__tmFitBound){ window.__tmFitBound=true;
     window.addEventListener('resize',()=>{ clearTimeout(window.__tmFitT);
       window.__tmFitT=setTimeout(()=>{ const b=document.getElementById('tmap'); if(b) tmFit(b); },120); }); }
-  let tip=null;
-  const hide=()=>{ if(tip){tip.remove(); tip=null;} };
+  // tip 상태를 전역(window)에 둔다 — hydrateTreemap 은 탭 전환·새로고침마다
+  // 다시 호출되는데, 함수 지역 변수로 두면 그때마다 새 클로저가 생겨 아래
+  // "바깥 탭 시 닫기" 전역 핸들러가 예전 tip 을 못 찾는다.
+  const hide=()=>{ if(window.__tmTip){window.__tmTip.remove(); window.__tmTip=null; window.__tmTipFor=null;} };
   const show=(el)=>{
+    if(window.__tmTipFor===el){ hide(); return; }   // 같은 타일 다시 탭 → 닫기
     hide();
     const c=el.dataset.c===''?null:+el.dataset.c;
-    tip=document.createElement('div'); tip.className='tmtip';
+    const tip=document.createElement('div'); tip.className='tmtip';
     tip.innerHTML=`<b>${esc(el.dataset.l)}</b><br>비중 ${el.dataset.p}% · ${el.dataset.n}종목`
       +(c==null?'':`<br>평균 ${signPct(c)}`)+`<br>대표 ${esc(el.dataset.top)}`;
     box.appendChild(tip);
@@ -915,6 +918,7 @@ function hydrateTreemap(){
     let L=er.left-br.left+er.width/2-tr.width/2, T=er.top-br.top-tr.height-6;
     if(T<2) T=er.top-br.top+er.height+6;
     tip.style.left=Math.max(2,Math.min(L,br.width-tr.width-2))+'px'; tip.style.top=T+'px';
+    window.__tmTip=tip; window.__tmTipFor=el;
   };
   box.querySelectorAll('.cell').forEach(el=>{
     el.addEventListener('mouseenter',()=>show(el));
@@ -924,6 +928,12 @@ function hydrateTreemap(){
     el.addEventListener('click',()=>show(el));   // 터치 기기
   });
   box.addEventListener('mouseleave',hide);
+  // 타일이 아닌 다른 곳(화면 어디든)을 탭하면 닫는다 — 한 번만 등록.
+  if(!window.__tmOutsideBound){ window.__tmOutsideBound=true;
+    document.addEventListener('click',(e)=>{
+      if(!e.target.closest('.tmap .cell')) hide();
+    });
+  }
 }
 function renderPositions(){
   { const segEl=document.getElementById('segPos'); if(segEl) segEl.style.display=''; }
