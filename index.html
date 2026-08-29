@@ -906,8 +906,12 @@ function hydrateTreemap(){
   // 다시 호출되는데, 함수 지역 변수로 두면 그때마다 새 클로저가 생겨 아래
   // "바깥 탭 시 닫기" 전역 핸들러가 예전 tip 을 못 찾는다.
   const hide=()=>{ if(window.__tmTip){window.__tmTip.remove(); window.__tmTip=null; window.__tmTipFor=null;} };
+  // "같은 타일 다시 탭하면 닫기" 토글은 넣었다가 뺐다 — 큰 타일(예: 압도적
+  // 비중의 바이오)은 사용자가 위치를 바꿔가며 여러 번 탭하기 쉬운데, el 이
+  // 같으면 위치와 무관하게 "같은 타일"로 보고 토글되어 짝수 번째 탭에서
+  // 매번 닫혀버렸다(실측: 탭할 때마다 반응 없는 것처럼 보이던 원인). 같은
+  // 타일은 그냥 다시 보여주기만 하고, 닫는 건 "다른 곳 탭"에만 맡긴다.
   const show=(el)=>{
-    if(window.__tmTipFor===el){ hide(); return; }   // 같은 타일 다시 탭 → 닫기
     hide();
     const c=el.dataset.c===''?null:+el.dataset.c;
     const tip=document.createElement('div'); tip.className='tmtip';
