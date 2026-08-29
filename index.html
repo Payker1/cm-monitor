@@ -151,9 +151,6 @@
     border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-family:'JetBrains Mono';
     font-size:10.5px;line-height:1.5;color:var(--txt);white-space:nowrap;
     box-shadow:0 6px 18px rgba(0,0,0,.35);}
-  .tmleg{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;
-    font-family:'JetBrains Mono';font-size:9.5px;color:var(--txt-faint);}
-  .tmleg i{display:inline-block;width:15px;height:9px;border-radius:2px;}
   .green{color:var(--green);}.red{color:var(--red);}.amber{color:var(--amber);}.purple{color:var(--purple);}
   .wgroup{margin-bottom:16px;}
   .wghead{display:flex;align-items:center;gap:8px;margin:2px 2px 9px;}
@@ -388,7 +385,7 @@
 </section>
 
 <section class="page" id="positions">
-  <div class="sec-label labelrow"><span id="posSortLabel">보유 종목 · 총 수익률 높은 순</span><div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button><button data-v="tree">히트맵</button></div></div>
+  <div class="sec-label labelrow"><span id="posSortLabel">보유 종목 · 총 수익률 높은 순</span><div class="viewseg" id="posViewSeg"><button class="von" data-v="eval">평가금</button><button data-v="price">현재가</button></div></div>
   <div class="filterrow rowtop"><div class="seg" id="segPos"><button class="chip on" data-m="all">전체</button><button class="chip" data-m="KR">KR</button><button class="chip" data-m="US">US</button></div><div class="updcluster"><span class="upd-t" id="updPos">—</span><button class="refbtn" id="refPos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v4h-4"/></svg>새로고침</button></div></div>
   <div id="posList"></div>
 </section>
@@ -435,6 +432,8 @@
   <div class="sec-label">시장 국면 <span style="color:var(--txt-faint);text-transform:none;letter-spacing:0">· 탭하여 시장 선택</span></div>
   <div id="cardKR"></div>
   <div id="cardUS"></div>
+  <div class="sec-label" style="margin-top:18px">섹터 히트맵 · <span id="mktLabelSector">국장</span> RS 상위 50 기준</div>
+  <div id="sectorHeat"></div>
   <div class="sec-label" style="margin-top:18px">오늘의 주도주 · <span id="mktLabelLead">국장</span> 거래대금 상위</div>
   <div id="leadList"></div>
   <button class="morebtn" id="moreBtn">전체 순위 더보기 · 거래대금 / RS 상위 50</button>
@@ -493,6 +492,7 @@ async function fetchData(path){
 }
 let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicked=false, posF='all', watF='all', sigF='all', lastFetch=null, watchPicked=false;
 let posView=localStorage.getItem('cm_posview')||'eval';
+if(posView==='tree') posView='eval';   // 보유탭 히트맵 제거 — 이전 세션에 저장된 값 호환
 const posOpen=new Set();
 const watchOpen=new Set();
 const sigOpen=new Set();   // '스크리닝 완료' 시그널 중 탭해서 펼친 것(ts 로 식별)
@@ -505,11 +505,10 @@ btns.forEach(b=>b.addEventListener('click',()=>{
   b.classList.add('active');
   document.getElementById(b.dataset.t).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  // 히트맵(posView==='tree')은 글자 크기를 실제 렌더 픽셀로 재서 정한다(tmFit).
-  // 이 탭이 display:none 인 동안 데이터가 갱신돼 그때 그려졌다면 폭/높이가 0으로
-  // 측정돼 종목명이 전부 숨김 처리된 채 남는다 — 탭이 실제로 보이는 지금
-  // 다시 그려 정확한 크기로 재측정한다.
-  if(b.dataset.t==='positions'&&posView==='tree'&&typeof STATE!=='undefined'&&STATE) renderPositions();
+  // 섹터 히트맵은 글자 크기를 실제 렌더 픽셀로 재서 정한다(tmFit). 마켓 탭이
+  // display:none 인 동안 데이터가 갱신돼 그때 그려졌다면 폭/높이가 0으로 측정돼
+  // 라벨이 전부 숨김 처리된 채 남는다 — 탭이 실제로 보이는 지금 다시 맞춘다.
+  if(b.dataset.t==='market'){ const box=document.getElementById('tmap'); if(box) tmFit(box); }
 }));
 
 // ── 테마 토글 ──
@@ -755,21 +754,19 @@ async function loadChart(market,sym,mount,opts){
 function mountChart(m){ if(!m)return; const avg=(m.dataset.avg!=null&&m.dataset.avg!=='')?parseFloat(m.dataset.avg):null; loadChart(m.dataset.mk,m.dataset.sym,m,{avg}); }
 function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(mountChart); }
 
-// ── 보유 히트맵(구현은 squarified treemap) ──────────────────────
-// 면적=평가금액, 색=당일 등락률(발산형), 현금=회색. 미장은 알파벳 티커로 표기.
-// 색 단계는 앱 토큰을 패널 위에 알파 합성한 값(다크 .16/.287/.413/.54, 라이트 .24/.4/.56/.72).
-// 상한은 타일 위 글자 대비 4.5:1 을 만족하는 지점이다.
-const TM_GREEN={dark:['#143e33','#16543d','#176a48','#198153'],
-                light:['#c6e5d7','#a0d3bd','#7ac2a3','#54b188']};
-const TM_RED  ={dark:['#38292e','#562e35','#74343d','#923944'],
-                light:['#f4ccd0','#edaab0','#e58891','#de6671']};
-const TM_CASH ={dark:'#243336', light:'#ebecee'};
-// 등락률 → 단계. 임계는 하루 변동 체감에 맞춘 0.5 / 1.5 / 3.0%.
-const tmStep=v=>{const a=Math.abs(v); return a<0.5?0:a<1.5?1:a<3?2:3;};
-function tmColor(d){
+// ── 섹터 히트맵(구현은 squarified treemap) ──────────────────────
+// 면적=순위가중 점수(1등에 가장 큰 가산점), 색=전체 대비 비중(단일톤 순차— 방향성
+// 없는 '쏠림 정도'라 상승/하락 발산형 대신 하나의 톤을 진하게/연하게만 쓴다).
+// 색 단계는 앱 --blue 토큰을 패널 위에 알파 합성한 값(다크 .16/.287/.413/.54,
+// 라이트 .24/.4/.56/.72) — 보유 히트맵에 쓰던 것과 같은 합성식, 톤만 blue.
+// 상한은 타일 위 글자 대비 4.5:1 을 만족하는 지점이다(다크 6.3:1, 라이트 5.2:1 확인).
+const TM_BLUE={dark:['#193348','#1e4064','#244d7f','#295b9b'],
+               light:['#cbdaf2','#a8c1e9','#85a8e1','#628fd8']};
+// 비중(%) → 단계. 섹터 수가 10~20개라 상위 몇 개가 크게 도드라지는 구조 — 5/10/20% 기준.
+const tmStep=pct=>pct<5?0:pct<10?1:pct<20?2:3;
+function tmColor(pct){
   const mode=document.body.classList.contains('light')?'light':'dark';
-  if(d==null) return TM_CASH[mode];
-  return (d>=0?TM_GREEN:TM_RED)[mode][tmStep(d)];
+  return TM_BLUE[mode][tmStep(pct)];
 }
 // squarified treemap — 타일이 정사각형에 가깝게 배치되도록 행 단위로 나눈다.
 // 타일 목표 가로세로비 — 각 타일이 이 비율에 가깝게 나오도록 행을 끊는다.
@@ -834,38 +831,36 @@ function tmLayout(items,x,y,w,h,out){
   pick.forEach(c=>out.push(c));
   return out;
 }
-function renderTreemap(ps){
-  const cash=Math.max(0,+((STATE.account||{}).cash_krw)||0);
-  // 보유 종목을 평가금 내림차순으로 먼저, CASH 는 마지막.
-  // squarified 는 순서대로 좌상단부터 채우므로, CASH 비중이 아무리 커도
-  // 보유 종목이 왼쪽-위를 차지하고 CASH 가 오른쪽-아래로 밀린다.
-  const items=ps.filter(p=>(p.eval_amount||0)>0).map(p=>({
-    key:p.sym, label:p.market==='US'?p.sym:(p.name||p.sym),   // 미장은 알파벳 티커
-    v:p.eval_amount, d:(p.change_pct!=null?p.change_pct:null), market:p.market, cash:false }))
-    .sort((a,b)=>b.v-a.v);
-  if(cash>0) items.push({key:'__cash__',label:'CASH',v:cash,d:null,cash:true});
-  if(!items.length) return emptyMsg('보유 종목 없음');
-  const W=1000,H=750;                       // 가로 4 : 세로 3
+// RS 상위 50 리스트 → 섹터별 순위가중 점수. 1등이 가장 큰 가산점(N점), 꼴찌가 1점 —
+// 단순 개수가 아니라 "몇 등짜리가 몇 개 있는가"로 지금 주도 섹터를 가린다.
+// 섹터 없는 종목(태그 미확정)은 제외 — 없는 걸 '기타'로 뭉개지 않는다는 원칙과 동일.
+function sectorHeatItems(rows){
+  const n=rows.length, by={};
+  rows.forEach((r,i)=>{
+    if(!r.sector) return;
+    const w=n-i;   // 1등=n점 ... 꼴찌=1점
+    const g=by[r.sector]||(by[r.sector]={sector:r.sector,v:0,count:0,top:r.name||r.sym});
+    g.v+=w; g.count+=1;
+  });
+  return Object.values(by).sort((a,b)=>b.v-a.v);
+}
+function renderSectorHeatmap(rows){
+  const items=sectorHeatItems(rows);
+  if(!items.length) return emptyMsg('섹터 데이터 없음');
+  const W=1000,H=750;
   const cells=tmLayout(items,0,0,W,H,[]);
   const tot=items.reduce((s,i)=>s+i.v,0);
   const body=cells.map(c=>{
-    const dtxt=c.cash?'':signPct(c.d==null?0:c.d);
+    const pct=tot?c.v/tot*100:0;
     // 글자 크기는 렌더 뒤 실제 픽셀을 재서 정한다(tmFit) — 컨테이너 폭이 기기마다 달라
     // 가상 좌표만으로는 맞출 수 없다.
     return `<div class="cell" tabindex="0" style="left:${(c.x/W*100).toFixed(3)}%;top:${(c.y/H*100).toFixed(3)}%;`
       +`width:calc(${(c.w/W*100).toFixed(3)}% - 2px);height:calc(${(c.h/H*100).toFixed(3)}% - 2px);`
-      +`margin:1px;background:${tmColor(c.cash?null:c.d)}" `
-      +`data-l="${esc(c.label)}" data-v="${c.v}" data-d="${c.cash?'':(c.d==null?'':c.d)}" data-p="${(c.v/tot*100).toFixed(1)}">`
-      +`<span class="s">${esc(c.label)}</span>`
-      +(dtxt?`<span class="d">${dtxt}</span>`:'')+`</div>`;
+      +`margin:1px;background:${tmColor(pct)}" `
+      +`data-l="${esc(c.sector)}" data-p="${pct.toFixed(1)}" data-n="${c.count}" data-top="${esc(c.top)}">`
+      +`<span class="s">${esc(c.sector)}</span><span class="d">${pct.toFixed(1)}%</span></div>`;
   }).join('');
-  const mode=document.body.classList.contains('light')?'light':'dark';
-  const leg=`<div class="tmleg"><span>하락</span>`
-    +TM_RED[mode].slice().reverse().map(c=>`<i style="background:${c}"></i>`).join('')
-    +`<i style="background:${TM_CASH[mode]}"></i>`
-    +TM_GREEN[mode].map(c=>`<i style="background:${c}"></i>`).join('')
-    +`<span>상승</span><span style="margin-left:6px">· 회색=CASH</span></div>`;
-  return `<div class="tmap" id="tmap">${body}</div>${leg}`;
+  return `<div class="tmap" id="tmap">${body}</div>`;
 }
 // 타일 실제 픽셀 크기에 맞춰 글자 크기를 정한다.
 // 높이뿐 아니라 '라벨 길이 대비 폭'도 함께 봐야 긴 이름(예: 하나금융지주)이 잘리지 않는다.
@@ -874,7 +869,6 @@ function tmFit(box){
     const w=el.clientWidth, h=el.clientHeight;
     const nameEl=el.querySelector('.s'), pctEl=el.querySelector('.d');
     const len=Math.max(1,(nameEl?nameEl.textContent:'').length);
-    // 한글은 글리프가 넓어 폭 계수를 크게 잡는다
     const wide=/[\u3131-\uD79D]/.test(nameEl?nameEl.textContent:'');
     const perCh=wide?1.02:0.62;
     let fs=Math.min(h*0.34, (w-6)/(len*perCh));
@@ -887,7 +881,7 @@ function tmFit(box){
                 pctEl.style.display=(h<30||w<28)?'none':''; }
   });
 }
-// 타일 hover/focus 시 상세 — 면적만으로는 금액을 읽을 수 없으므로 붙인다.
+// 타일 hover/focus 시 상세 — 종목수·대표종목은 면적만으로는 안 보인다.
 function hydrateTreemap(){
   const box=document.getElementById('tmap'); if(!box) return;
   tmFit(box);
@@ -900,10 +894,9 @@ function hydrateTreemap(){
   const hide=()=>{ if(tip){tip.remove(); tip=null;} };
   const show=(el)=>{
     hide();
-    const d=el.dataset.d===''?null:+el.dataset.d;
     tip=document.createElement('div'); tip.className='tmtip';
-    tip.innerHTML=`<b>${esc(el.dataset.l)}</b><br>${maskWon(+el.dataset.v)} · ${el.dataset.p}%`
-      +(d==null?'':`<br>당일 ${signPct(d)}`);
+    tip.innerHTML=`<b>${esc(el.dataset.l)}</b><br>${el.dataset.p}% · ${el.dataset.n}종목`
+      +`<br>대표 ${esc(el.dataset.top)}`;
     box.appendChild(tip);
     const br=box.getBoundingClientRect(), er=el.getBoundingClientRect(), tr=tip.getBoundingClientRect();
     let L=er.left-br.left+er.width/2-tr.width/2, T=er.top-br.top-tr.height-6;
@@ -927,23 +920,7 @@ function renderPositions(){
     ? (a,b)=>((dchg(b)==null?-1e9:dchg(b))-(dchg(a)==null?-1e9:dchg(a)))
     : (a,b)=>(b.pl_pct||0)-(a.pl_pct||0));
   const lbl=document.getElementById('posSortLabel');
-  if(lbl) lbl.textContent=view==='tree'?'보유 종목 · 비중 히트맵'
-    :(view==='price'?'보유 종목 · 일간 수익률 높은 순':'보유 종목 · 총 수익률 높은 순');
-  if(view==='tree'){
-    // 히트맵은 카드 목록 대신 통째로 그린다(요약 헤더는 유지 — 총 평가금액 맥락).
-    // ⚠ KR/US 필터를 적용하지 않는다. 히트맵은 계좌 전체(보유+CASH)의 비중을 보는 화면이라
-    //   한쪽 시장만 남기면 CASH 비중과 합계가 계좌 실제와 어긋난다.
-    const ps=(STATE.positions||[]);
-    // 필터가 무효인 화면이므로 칩 자체를 숨긴다(보이는데 안 먹으면 고장으로 읽힌다).
-    const segEl=document.getElementById('segPos'); if(segEl) segEl.style.display='none';
-    const sumEvalT=ps.reduce((s,p)=>s+(p.eval_amount||0),0);
-    const sumPlT=ps.reduce((s,p)=>s+(p.pl_krw||0),0);
-    const sumCostT=sumEvalT-sumPlT, sumPctT=sumCostT>0?(sumPlT/sumCostT*100):0, scT=sumPlT>=0?'green':'red';
-    const head=ps.length?`<div class="possum"><div class="ps-l"><div class="ps-k">보유 ${ps.length}종목 · 총 평가금액</div><div class="ps-v">${maskWon(sumEvalT)}</div></div><div class="ps-r"><div class="ps-pct ${scT}">${signPct(sumPctT)}</div><div class="ps-amt ${scT}">${maskSignWon(sumPlT)}</div></div></div>`:'';
-    document.getElementById('posList').innerHTML=head+renderTreemap(ps);
-    hydrateTreemap();
-    return;
-  }
+  if(lbl) lbl.textContent=view==='price'?'보유 종목 · 일간 수익률 높은 순':'보유 종목 · 총 수익률 높은 순';
   const sumEval=ps.reduce((s,p)=>s+(p.eval_amount||0),0);
   const sumPl=ps.reduce((s,p)=>s+(p.pl_krw||0),0);
   const sumCost=sumEval-sumPl, sumPct=sumCost>0?(sumPl/sumCost*100):0, sc=sumPl>=0?'green':'red';
@@ -1109,6 +1086,9 @@ function renderMarket(mkt){
   curMarket=mkt;
   const rk=(STATE.ranking||{})[mkt]||{}, leaders=(rk.by_value||[]).slice(0,4);
   document.getElementById('mktLabelLead').textContent=mkt==='kr'?'국장':'미장';
+  document.getElementById('mktLabelSector').textContent=mkt==='kr'?'국장':'미장';
+  document.getElementById('sectorHeat').innerHTML=renderSectorHeatmap(rk.by_rs||[]);
+  hydrateTreemap();
   const isKR=mkt==='kr';
   document.getElementById('leadList').innerHTML=leaders.length?leaders.map(l=>{
     const main=isKR?esc(l.name||l.sym):esc(l.sym), sub=isKR?esc(l.sym):esc(l.name||'');
