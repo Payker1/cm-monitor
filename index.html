@@ -202,6 +202,16 @@
   .sig .t{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-faint);}
   .sig .l2{font-size:12px;color:var(--txt-dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .sig .l2 b{font-family:'JetBrains Mono';color:var(--num);font-weight:700;}
+  .sig.hascw{cursor:pointer;}
+  .sig .sigexp{max-height:0;opacity:0;overflow:hidden;
+    transition:max-height .28s ease,opacity .2s ease,margin-top .28s ease;}
+  .sig.wcopen .sigexp{max-height:400px;opacity:1;margin-top:8px;}
+  .sig .wcrow{display:flex;align-items:baseline;gap:6px;font-size:12px;padding:3px 0;}
+  .sig .wcrow .wcsign{font-family:'JetBrains Mono';font-weight:800;width:12px;flex:none;}
+  .sig .wcrow.add .wcsign{color:var(--green);}
+  .sig .wcrow.rm .wcsign{color:var(--red);}
+  .sig .wcrow .wcnm{font-weight:600;}
+  .sig .wcrow .wcreason{color:var(--txt-faint);font-size:11px;}
   /* history */
   .filterrow{margin:2px 0 10px;}
   .seg{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
@@ -485,6 +495,7 @@ let STATE=null, curM='all', curP='1m', curMarket='kr', sheetKey='vol', userPicke
 let posView=localStorage.getItem('cm_posview')||'eval';
 const posOpen=new Set();
 const watchOpen=new Set();
+const sigOpen=new Set();   // '스크리닝 완료' 시그널 중 탭해서 펼친 것(ts 로 식별)
 
 // ── 탭 네비 ──
 const btns=document.querySelectorAll('.nav button'), pages=document.querySelectorAll('.page');
@@ -629,11 +640,21 @@ function sigRow(s){
   const t=s.ts?`${s.ts.slice(5,7)}.${s.ts.slice(8,10)} ${s.ts.slice(11,16)}`:'';
   const nm=s.market==='KR'?esc(s.name||s.sym):esc(s.sym);
   const J=a=>a.filter(Boolean).join(' · ');
-  // ALT(시장국면/스크리닝): 2줄 전용
+  // ALT(시장국면/스크리닝): 2줄 전용. '스크리닝 완료'는 관심종목 추가/제거 목록을
+  // 탭하면 펼쳐 보여준다(watchlist_changes — 피벗 7% 이탈로 장중 제거된 것도 포함).
   if(s.type==='alert'){
-    return `<div class="sig"><div class="ic alert">ALT</div><div class="body">
+    const wc=Array.isArray(s.watchlist_changes)?s.watchlist_changes:[];
+    const key=s.ts||'';
+    const hascw=wc.length>0, wcopen=hascw&&sigOpen.has(key)?'wcopen':'';
+    const wcBody=hascw?`<div class="sigexp">`+wc.map(c=>{
+      const isAdd=c.action==='add';
+      return `<div class="wcrow ${isAdd?'add':'rm'}"><span class="wcsign">${isAdd?'+':'−'}</span>`
+        +`<span class="wcnm">${esc(c.name||c.sym||'')}</span>`
+        +(c.reason?`<span class="wcreason">${esc(c.reason)}</span>`:'')+`</div>`;
+    }).join('')+`</div>`:'';
+    return `<div class="sig ${hascw?'hascw':''} ${wcopen}" data-sk="${esc(key)}"><div class="ic alert">ALT</div><div class="body">
       <div class="l1"><span class="act blue">${esc(s.market||'')}${s.market?' · ':''}시장 국면${s.regime?` · ${esc(s.regime)}`:''}</span><span class="t">${t}</span></div>
-      <div class="l2">${esc(s.note||'')}</div></div></div>`;
+      <div class="l2">${esc(s.note||'')}</div>${wcBody}</div></div>`;
   }
   let l2;
   if(s.type==='buy'||s.type==='pyramid'){
@@ -1056,6 +1077,7 @@ bindSeg('segPos',f=>{posF=f;renderPositions();});
 bindSeg('segWat',f=>{watchPicked=true;watF=f;renderWatch();});
 (function(){const wl=document.getElementById('watchList'); if(wl) wl.addEventListener('click',e=>{const it=e.target.closest('.witem.hasch'); if(!it)return; const k=it.dataset.ck; if(!k)return; const nowOpen=!watchOpen.has(k); if(nowOpen)watchOpen.add(k); else watchOpen.delete(k); it.classList.toggle('open',nowOpen); if(nowOpen){const m=it.querySelector('.chart'); if(m)mountChart(m);}});})();
 bindSeg('segSig',f=>{sigF=f;renderSignals();});
+(function(){const sl=document.getElementById('sigList'); if(sl) sl.addEventListener('click',e=>{const it=e.target.closest('.sig.hascw'); if(!it)return; const k=it.dataset.sk; if(!k)return; const nowOpen=!sigOpen.has(k); if(nowOpen)sigOpen.add(k); else sigOpen.delete(k); it.classList.toggle('wcopen',nowOpen);});})();
 document.querySelectorAll('#segPeriod .chip').forEach(c=>c.addEventListener('click',()=>{
   document.querySelectorAll('#segPeriod .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');curP=c.dataset.p;applyHist();renderTrades();}));
 
