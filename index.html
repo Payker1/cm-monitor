@@ -42,7 +42,7 @@
       radial-gradient(900px 500px at 80% -10%, var(--glow1), transparent 60%),
       radial-gradient(700px 400px at -10% 10%, var(--glow2), transparent 55%),
       var(--bg);}
-  body{max-width:480px;margin:0 auto;padding-bottom:94px;min-height:100vh;
+  body{max-width:480px;margin:0 auto;padding-bottom:83px;min-height:100vh;
     background:radial-gradient(900px 500px at 80% -10%, var(--glow1), transparent 60%),
       radial-gradient(700px 400px at -10% 10%, var(--glow2), transparent 55%),var(--bg);}
   body::after{content:'';position:fixed;top:0;left:50%;transform:translate3d(-50%,0,0);width:100%;max-width:480px;height:env(safe-area-inset-top);background:#0b1416;z-index:60;pointer-events:none;will-change:transform;}
@@ -352,7 +352,7 @@
   .refbtn svg{width:11px;height:11px;}
   .refbtn.spin svg{animation:cmspin .6s linear infinite;}
   @keyframes cmspin{to{transform:rotate(360deg)}}
-  .nav{position:fixed;bottom:-6px;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+  .nav{position:fixed;bottom:-17px;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
     background:var(--bar-bg);backdrop-filter:blur(16px);border-top:1px solid var(--line);
     display:flex;padding:9px 6px calc(10px + env(safe-area-inset-bottom));z-index:50;}
   .nav button{flex:1;background:none;border:none;color:var(--txt-faint);
