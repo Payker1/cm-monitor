@@ -755,18 +755,24 @@ function mountChart(m){ if(!m)return; const avg=(m.dataset.avg!=null&&m.dataset.
 function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(mountChart); }
 
 // ── 섹터 히트맵(구현은 squarified treemap) ──────────────────────
-// 면적=순위가중 점수(1등에 가장 큰 가산점), 색=전체 대비 비중(단일톤 순차— 방향성
-// 없는 '쏠림 정도'라 상승/하락 발산형 대신 하나의 톤을 진하게/연하게만 쓴다).
-// 색 단계는 앱 --blue 토큰을 패널 위에 알파 합성한 값(다크 .16/.287/.413/.54,
-// 라이트 .24/.4/.56/.72) — 보유 히트맵에 쓰던 것과 같은 합성식, 톤만 blue.
-// 상한은 타일 위 글자 대비 4.5:1 을 만족하는 지점이다(다크 6.3:1, 라이트 5.2:1 확인).
-const TM_BLUE={dark:['#193348','#1e4064','#244d7f','#295b9b'],
-               light:['#cbdaf2','#a8c1e9','#85a8e1','#628fd8']};
-// 비중(%) → 단계. 섹터 수가 10~20개라 상위 몇 개가 크게 도드라지는 구조 — 5/10/20% 기준.
-const tmStep=pct=>pct<5?0:pct<10?1:pct<20?2:3;
-function tmColor(pct){
+// 면적=순위가중 점수(1등에 가장 큰 가산점), 색=섹터 평균 당일 등락률(발산형,
+// 초록/빨강) — 방향성 있는 지표로 바꿔달라는 요청. 평균도 순위가중을 그대로
+// 써서(크기를 정하는 가중치와 동일) 상위권 종목의 오늘 움직임이 더 크게 반영된다.
+// 등락률을 아직 못 받아온 섹터(부팅 직후 몇 틱)는 방향을 지어내지 않고 중립색.
+// 색 단계는 보유 히트맵에 쓰던 것과 같은 합성식(앱 --green/--red 토큰을 패널 위에
+// 알파 합성, 다크 .16/.287/.413/.54, 라이트 .24/.4/.56/.72) — 상한은 타일 위 글자
+// 대비 4.5:1 을 만족하는 지점이다.
+const TM_GREEN={dark:['#143e33','#16543d','#176a48','#198153'],
+                light:['#c6e5d7','#a0d3bd','#7ac2a3','#54b188']};
+const TM_RED  ={dark:['#38292e','#562e35','#74343d','#923944'],
+                light:['#f4ccd0','#edaab0','#e58891','#de6671']};
+const TM_NEUTRAL={dark:'#243336', light:'#ebecee'};
+// 등락률 → 단계. 임계는 하루 변동 체감에 맞춘 0.5 / 1.5 / 3.0%.
+const tmStep=v=>{const a=Math.abs(v); return a<0.5?0:a<1.5?1:a<3?2:3;};
+function tmColor(chg){
   const mode=document.body.classList.contains('light')?'light':'dark';
-  return TM_BLUE[mode][tmStep(pct)];
+  if(chg==null) return TM_NEUTRAL[mode];
+  return (chg>=0?TM_GREEN:TM_RED)[mode][tmStep(chg)];
 }
 // squarified treemap — 타일이 정사각형에 가깝게 배치되도록 행 단위로 나눈다.
 // 타일 목표 가로세로비 — 각 타일이 이 비율에 가깝게 나오도록 행을 끊는다.
@@ -838,11 +844,15 @@ function sectorHeatItems(rows){
   const n=rows.length, by={};
   rows.forEach((r,i)=>{
     if(!r.sector) return;
-    const w=n-i;   // 1등=n점 ... 꼴찌=1점
-    const g=by[r.sector]||(by[r.sector]={sector:r.sector,v:0,count:0,top:r.name||r.sym});
+    const w=n-i;   // 1등=n점 ... 꼴찌=1점 — 크기와 등락률 가중 둘 다 이 값을 쓴다.
+    const g=by[r.sector]||(by[r.sector]={sector:r.sector,v:0,count:0,top:r.name||r.sym,cw:0,csum:0});
     g.v+=w; g.count+=1;
+    // 등락률이 아직 안 채워진 종목(부팅 직후 몇 틱)은 평균에서 제외 — 0으로 넣으면
+    // '오늘 안 움직였다'는 거짓 신호가 된다. 그런 종목만 있으면 섹터 색은 중립.
+    if(r.change_pct!=null){ g.cw+=w; g.csum+=w*r.change_pct; }
   });
-  return Object.values(by).sort((a,b)=>b.v-a.v);
+  return Object.values(by).map(g=>({...g, chg: g.cw?g.csum/g.cw:null}))
+                           .sort((a,b)=>b.v-a.v);
 }
 function renderSectorHeatmap(rows){
   const items=sectorHeatItems(rows);
@@ -852,13 +862,15 @@ function renderSectorHeatmap(rows){
   const tot=items.reduce((s,i)=>s+i.v,0);
   const body=cells.map(c=>{
     const pct=tot?c.v/tot*100:0;
+    const dtxt=c.chg==null?'—':signPct(c.chg);
     // 글자 크기는 렌더 뒤 실제 픽셀을 재서 정한다(tmFit) — 컨테이너 폭이 기기마다 달라
     // 가상 좌표만으로는 맞출 수 없다.
     return `<div class="cell" tabindex="0" style="left:${(c.x/W*100).toFixed(3)}%;top:${(c.y/H*100).toFixed(3)}%;`
       +`width:calc(${(c.w/W*100).toFixed(3)}% - 2px);height:calc(${(c.h/H*100).toFixed(3)}% - 2px);`
-      +`margin:1px;background:${tmColor(pct)}" `
-      +`data-l="${esc(c.sector)}" data-p="${pct.toFixed(1)}" data-n="${c.count}" data-top="${esc(c.top)}">`
-      +`<span class="s">${esc(c.sector)}</span><span class="d">${pct.toFixed(1)}%</span></div>`;
+      +`margin:1px;background:${tmColor(c.chg)}" `
+      +`data-l="${esc(c.sector)}" data-p="${pct.toFixed(1)}" data-n="${c.count}" data-top="${esc(c.top)}" `
+      +`data-c="${c.chg==null?'':c.chg}">`
+      +`<span class="s">${esc(c.sector)}</span><span class="d">${dtxt}</span></div>`;
   }).join('');
   return `<div class="tmap" id="tmap">${body}</div>`;
 }
@@ -894,9 +906,10 @@ function hydrateTreemap(){
   const hide=()=>{ if(tip){tip.remove(); tip=null;} };
   const show=(el)=>{
     hide();
+    const c=el.dataset.c===''?null:+el.dataset.c;
     tip=document.createElement('div'); tip.className='tmtip';
-    tip.innerHTML=`<b>${esc(el.dataset.l)}</b><br>${el.dataset.p}% · ${el.dataset.n}종목`
-      +`<br>대표 ${esc(el.dataset.top)}`;
+    tip.innerHTML=`<b>${esc(el.dataset.l)}</b><br>비중 ${el.dataset.p}% · ${el.dataset.n}종목`
+      +(c==null?'':`<br>평균 ${signPct(c)}`)+`<br>대표 ${esc(el.dataset.top)}`;
     box.appendChild(tip);
     const br=box.getBoundingClientRect(), er=el.getBoundingClientRect(), tr=tip.getBoundingClientRect();
     let L=er.left-br.left+er.width/2-tr.width/2, T=er.top-br.top-tr.height-6;
