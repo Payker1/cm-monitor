@@ -924,12 +924,15 @@ function hydrateTreemap(){
     tip.style.left=Math.max(2,Math.min(L,br.width-tr.width-2))+'px'; tip.style.top=T+'px';
     window.__tmTip=tip; window.__tmTipFor=el;
   };
+  // focus/blur 는 뺐다 — tabindex=0 인 타일을 터치로 탭하면 브라우저가 자동으로
+  // focus 를 주는데(그래서 :focus-visible CSS 밝기 효과는 그대로 뜬다), 이
+  // focus/blur 가 click 과 애매한 순서로 겹치면서 서로의 show/hide 를 지워버려
+  // "색은 바뀌는데 창은 안 뜬다"는 증상이 났다(실측: 특히 면적이 큰 타일에서
+  // 재현). 터치·클릭 모두 click 이벤트 하나로만 처리한다.
   box.querySelectorAll('.cell').forEach(el=>{
-    el.addEventListener('mouseenter',()=>show(el));
-    el.addEventListener('focus',()=>show(el));
+    el.addEventListener('mouseenter',()=>show(el));   // 데스크톱 마우스 호버
     el.addEventListener('mouseleave',hide);
-    el.addEventListener('blur',hide);
-    el.addEventListener('click',()=>show(el));   // 터치 기기
+    el.addEventListener('click',()=>show(el));
   });
   box.addEventListener('mouseleave',hide);
   // 타일이 아닌 다른 곳(화면 어디든)을 탭하면 닫는다 — 한 번만 등록.
