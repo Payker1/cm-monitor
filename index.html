@@ -907,6 +907,7 @@ function hydrateTreemap(){
 function renderPositions(){
   { const segEl=document.getElementById('segPos'); if(segEl) segEl.style.display=''; }
   const view=posView;
+  const _hotSets={};   // 관심종목과 같은 방식 — 렌더 1회당 한 번만 랭킹 심볼 집합을 만든다
   const dchg=p=>(p.change_pct!=null?p.change_pct:(p.day_pct!=null?p.day_pct:(p.today_pct!=null?p.today_pct:null)));
   const ps=fm(STATE.positions,posF).slice().sort(view==='price'
     ? (a,b)=>((dchg(b)==null?-1e9:dchg(b))-(dchg(a)==null?-1e9:dchg(a)))
@@ -934,7 +935,7 @@ function renderPositions(){
       l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2c=(Math.round(p.pl_krw||0)===0?'':c); r2txt=`${maskAmtSign(p.pl_krw)} (${signPct(p.pl_pct)})`;
     }
     return `<div class="pos ${accCls} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
-      <div class="row1"><span class="t-sym">${posName(p)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
+      <div class="row1"><span class="symline"><span class="t-sym">${posName(p)}</span>${hotBadge(p,_hotSets)}${p.rs!=null?`<span class="rs ${rsCls(p.rs)}">RS ${p.rs}</span>`:''}${sectTag(p.sector)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
       <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2 ${r2c}">${r2txt}</span></div>
       <div class="exp">${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}" data-avg="${p.entry!=null?p.entry:''}"></div>`:''}<div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
