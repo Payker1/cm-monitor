@@ -1006,20 +1006,23 @@ function histTrades(){
 function applyHist(){
   // 서버 집계(agg) 대신 필터된 거래에서 직접 재계산 → 기간 선택이 정확히 반영됨.
   const ts=histTrades();
-  let plSum=0, wins=0, gain=0, loss=0, lossN=0;
+  let plSum=0, wins=0, rrSum=0, rrN=0;
   for(const t of ts){
     const v=+t.pl_krw||0; plSum+=v;
     const isLoss=t.is_loss||(+t.pl_pct||0)<0;
-    if(isLoss){ lossN++; loss+=Math.abs(+t.pl_pct||0); } else { wins++; gain+=Math.abs(+t.pl_pct||0); }
+    if(!isLoss) wins++;
+    if(typeof t.rr==='number'){ rrSum+=t.rr; rrN++; }
   }
   const n=ts.length;
   const winRate=n?Math.round(wins/n*100):0;
-  // 손익비: 평균이익% / 평균손실% (손실 없으면 이익 종목만일 때 대비 안전 처리)
-  const avgWin=wins?gain/wins:0, avgLoss=lossN?loss/lossN:0;
-  const rr=avgLoss>0?(avgWin/avgLoss):(avgWin>0?avgWin:0);
+  // 손익비: 거래별 R값의 단순 평균 — 홈 화면 '평균 손익비'(utils/snapshot.py
+  // _recent_stats 의 avg_rr)와 같은 정의로 맞췄다. 예전엔 평균이익%÷평균손실%
+  // 였는데, 이기고 거래가 하나도 없으면 분자가 0이라 무조건 0.0이 나와
+  // "계산이 안 된다"처럼 보였다 — R 평균은 전부 손실이어도 음수로 의미 있게 나온다.
+  const rr=rrN?rrSum/rrN:0;
   const pl=document.getElementById('sumPL'); pl.textContent=signWon(plSum); pl.className='big '+cls(plSum);
   document.getElementById('sumWin').textContent=winRate+'%';
-  document.getElementById('sumRR').textContent=rr.toFixed(1);
+  document.getElementById('sumRR').textContent=(rr>=0?'+':'')+rr.toFixed(1)+'R';
   document.getElementById('sumN').textContent=n+'건';
   document.getElementById('sumScope').textContent='· '+({all:'전체',kr:'KR',us:'US'}[curM])+' · '+({'1m':'1개월','3m':'3개월',ytd:'YTD',all:'전체'}[curP]);
 }
