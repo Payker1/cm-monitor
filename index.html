@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#f5f6f8">
+<meta name="theme-color" content="#0b1416">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25,15 +25,6 @@
     --bar-bg:rgba(11,20,22,1);--num:#ffffff;
     --glow1:rgba(31,209,122,0.08);--glow2:rgba(61,139,255,0.05);
   }
-  body.light{
-    --bg:#f5f6f8;--bg-2:#eceef1;--panel:#ffffff;--panel-2:#f3f4f6;
-    --line:#e2e5ea;--line-soft:#eceef1;--txt:#1a1d21;--txt-dim:#5f6671;--txt-faint:#9aa0aa;
-    --green:#12925a;--green-bg:rgba(18,146,90,.10);--red:#d12b3a;--red-bg:rgba(209,43,58,.10);
-    --amber:#b3760e;--amber-bg:rgba(179,118,14,.12);--blue:#2563c9;--blue-bg:rgba(37,99,201,.10);
-    --purple:#7a4fc0;--purple-bg:rgba(122,79,192,.11);--accent:#12925a;
-    --bar-bg:rgba(255,255,255,1);--num:#0f1115;
-    --glow1:rgba(18,146,90,0.05);--glow2:rgba(37,99,201,0.04);
-  }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html{background:var(--bg)!important;}
   html,body{background:var(--bg);color:var(--txt);font-family:'Sora',sans-serif;overscroll-behavior:none;
@@ -46,21 +37,11 @@
     background:radial-gradient(900px 500px at 80% -10%, var(--glow1), transparent 60%),
       radial-gradient(700px 400px at -10% 10%, var(--glow2), transparent 55%),var(--bg);}
   body::after{content:'';position:fixed;top:0;left:50%;transform:translate3d(-50%,0,0);width:100%;max-width:480px;height:env(safe-area-inset-top);background:#0b1416;z-index:60;pointer-events:none;will-change:transform;}
-  body.light::after{background:#f5f6f8;}
   .topbar{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);
     background:var(--bar-bg);border-bottom:1px solid var(--line);padding:calc(11px + env(safe-area-inset-top)) 16px 10px;}
   .topbar::before{content:'';position:absolute;top:0;left:0;right:0;
     height:env(safe-area-inset-top);background:var(--bg);pointer-events:none;}
   .toprow{display:flex;align-items:center;gap:12px;}
-  .themebtn{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;
-    width:32px;height:32px;display:grid;place-items:center;cursor:pointer;color:var(--txt-dim);
-    flex:none;transition:all .2s;}
-  .themebtn:active{transform:scale(.92);}
-  .themebtn svg{width:17px;height:17px;}
-  .themebtn .ic-sun{display:block;}
-  .themebtn .ic-moon{display:none;}
-  body.light .themebtn .ic-sun{display:none;}
-  body.light .themebtn .ic-moon{display:block;}
   .brand{font-family:'JetBrains Mono';font-weight:800;font-size:15px;letter-spacing:.5px;}
   .brand b{color:var(--green);}
   .markets{margin-left:auto;display:flex;gap:8px;}
@@ -146,7 +127,6 @@
   .tmap .cell .s{font-family:'JetBrains Mono';font-weight:800;color:#fff;line-height:1.05;
     max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .tmap .cell .d{font-family:'JetBrains Mono';font-weight:700;color:#fff;opacity:.92;line-height:1.05;}
-  body.light .tmap .cell .s,body.light .tmap .cell .d{color:#1a1d21;}
   .tmtip{position:absolute;z-index:5;pointer-events:none;background:var(--bar-bg);
     border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-family:'JetBrains Mono';
     font-size:10.5px;line-height:1.5;color:var(--txt);white-space:nowrap;
@@ -248,8 +228,6 @@
   .regcard.bull .pick{background:var(--green);color:#06231a;}
   .regcard.bear .pick{background:var(--red);color:#2a0307;}
   .regcard.side .pick{background:var(--amber);color:#2a1a00;}
-  body.light .regcard.bull .pick{color:#ffffff;}
-  body.light .regcard.bear .pick{color:#ffffff;}
   .regcard.sel .pick{display:inline-block;}
   .mtitle{display:flex;align-items:center;}
   .regcard.bull{background:linear-gradient(160deg,rgba(31,209,122,.10),var(--panel));border-color:rgba(31,209,122,.35);}
@@ -340,7 +318,6 @@
      색만으로 구분하지 않도록 글자 'HOT' 을 함께 쓴다. */
   .hotb{font-family:'JetBrains Mono';font-size:9px;font-weight:800;color:#fff;background:var(--amber);
     padding:1px 5px;border-radius:5px;letter-spacing:.3px;}
-  body.light .hotb{color:#fff;}
   .filterrow.rowtop{display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .filterrow.rowtop .seg{margin-bottom:0;flex-wrap:wrap;}
   .updcluster{display:flex;align-items:center;gap:7px;flex:none;}
@@ -364,13 +341,8 @@
 </style>
 </head>
 <body>
-<script>if((localStorage.getItem('cm_theme')||'light')==='light')document.body.classList.add('light');</script>
 <div class="topbar"><div class="toprow">
   <div class="brand">K<b>CopyMoney</b></div>
-    <button id="themeToggle" class="themebtn" aria-label="테마 전환">
-      <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-      <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-    </button>
   <div class="markets">
     <div class="mkt bull"><span class="dot"></span><span class="nm">KR</span><span class="st">강세</span></div>
     <div class="mkt bear"><span class="dot"></span><span class="nm">US</span><span class="st">약세</span></div>
@@ -511,15 +483,6 @@ btns.forEach(b=>b.addEventListener('click',()=>{
   if(b.dataset.t==='market'){ const box=document.getElementById('tmap'); if(box) tmFit(box); }
 }));
 
-// ── 테마 토글 ──
-document.getElementById('themeToggle').addEventListener('click',()=>{
-  document.body.classList.toggle('light');
-  const dark=!document.body.classList.contains('light');
-  document.querySelector('meta[name=theme-color]').setAttribute('content',dark?'#0b1416':'#f5f6f8');
-  localStorage.setItem('cm_theme',dark?'dark':'light');
-  // 히트맵 색은 테마별 램프에서 뽑아 인라인 style 로 박히므로 클래스 토글만으론 안 바뀐다.
-  if(typeof STATE!=='undefined'&&STATE) renderPositions();
-});
 
 // ── 포맷 헬퍼 ──
 const won=n=>'₩'+Math.round(n||0).toLocaleString('en-US');
@@ -597,14 +560,17 @@ async function manualRefresh(btn){ if(btn.classList.contains('spin'))return; btn
 ['refPos','refWat','refSig'].forEach(id=>{const b=document.getElementById(id); if(b) b.addEventListener('click',()=>manualRefresh(b));});
 
 // ── 스파크라인 ──
-function spark(series){
+function spark(series, up){
   if(!series||series.length<2) return '';
   const w=320,h=46,mn=Math.min(...series),mx=Math.max(...series),rng=(mx-mn)||1;
   const pts=series.map((v,i)=>((i/(series.length-1))*w).toFixed(0)+','+(h-4-((v-mn)/rng)*(h-8)).toFixed(1));
   const line='M'+pts.join(' L');
+  // 위 숫자(당일 등락)와 같은 방향 값을 써서 색을 맞춘다 — 전엔 항상 초록 고정이라
+  // 당일 하락(빨강)인데 차트만 초록으로 나오는 불일치가 있었다.
+  const c=up?'var(--green)':'var(--red)';
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(31,209,122,.35)"/><stop offset="100%" stop-color="rgba(31,209,122,0)"/></linearGradient></defs>
-    <path d="${line}" fill="none" stroke="var(--green)" stroke-width="2"/><path d="${line} L${w},${h} L0,${h} Z" fill="url(#g)"/></svg>`;
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:${c};stop-opacity:.35"/><stop offset="100%" style="stop-color:${c};stop-opacity:0"/></linearGradient></defs>
+    <path d="${line}" fill="none" stroke="${c}" stroke-width="2"/><path d="${line} L${w},${h} L0,${h} Z" fill="url(#g)"/></svg>`;
 }
 
 // ── 상단바 시장 배지 ──
@@ -621,7 +587,7 @@ function renderHome(){
   document.getElementById('homeHero').innerHTML=
     `<div class="hero"><div class="lbl">계좌 평가금액 <span id="eyeBtn" style="cursor:pointer;margin-left:4px;opacity:.65;font-size:13px">${hideBal?'🙈':'👁'}</span></div><div class="equity">${maskWon(a.equity_krw)}</div>
      <div class="chg" style="color:var(--${up?'green':'red'})"><span class="pill" style="background:var(--${up?'green':'red'}-bg)">${up?'▲':'▼'} ${maskSignWon(a.day_change_krw)}</span><span>${signPct(a.day_change_pct)} 오늘</span></div>
-     ${spark(a.equity_series)}</div>`;
+     ${spark(a.equity_series, up)}</div>`;
   document.getElementById('homeStats').innerHTML=
     `<div class="stat"><div class="k">오픈 포지션</div><div class="v">${s.open_positions||0}</div><div class="sub">종목 보유 중</div></div>
      <div class="stat"><div class="k">피벗 돌파</div><div class="v green">${(STATE.watchlist||[]).filter(w=>w.group==='breakout').length}</div><div class="sub">브레이크아웃 종목</div></div>
@@ -760,19 +726,15 @@ function hydrateCharts(sel){ document.querySelectorAll(sel).forEach(mountChart);
 // 써서(크기를 정하는 가중치와 동일) 상위권 종목의 오늘 움직임이 더 크게 반영된다.
 // 등락률을 아직 못 받아온 섹터(부팅 직후 몇 틱)는 방향을 지어내지 않고 중립색.
 // 색 단계는 보유 히트맵에 쓰던 것과 같은 합성식(앱 --green/--red 토큰을 패널 위에
-// 알파 합성, 다크 .16/.287/.413/.54, 라이트 .24/.4/.56/.72) — 상한은 타일 위 글자
-// 대비 4.5:1 을 만족하는 지점이다.
-const TM_GREEN={dark:['#143e33','#16543d','#176a48','#198153'],
-                light:['#c6e5d7','#a0d3bd','#7ac2a3','#54b188']};
-const TM_RED  ={dark:['#38292e','#562e35','#74343d','#923944'],
-                light:['#f4ccd0','#edaab0','#e58891','#de6671']};
-const TM_NEUTRAL={dark:'#243336', light:'#ebecee'};
+// 알파 합성, .16/.287/.413/.54) — 상한은 타일 위 글자 대비 4.5:1 을 만족하는 지점이다.
+const TM_GREEN=['#143e33','#16543d','#176a48','#198153'];
+const TM_RED  =['#38292e','#562e35','#74343d','#923944'];
+const TM_NEUTRAL='#243336';
 // 등락률 → 단계. 임계는 하루 변동 체감에 맞춘 0.5 / 1.5 / 3.0%.
 const tmStep=v=>{const a=Math.abs(v); return a<0.5?0:a<1.5?1:a<3?2:3;};
 function tmColor(chg){
-  const mode=document.body.classList.contains('light')?'light':'dark';
-  if(chg==null) return TM_NEUTRAL[mode];
-  return (chg>=0?TM_GREEN:TM_RED)[mode][tmStep(chg)];
+  if(chg==null) return TM_NEUTRAL;
+  return (chg>=0?TM_GREEN:TM_RED)[tmStep(chg)];
 }
 // squarified treemap — 타일이 정사각형에 가깝게 배치되도록 행 단위로 나눈다.
 // 타일 목표 가로세로비 — 각 타일이 이 비율에 가깝게 나오도록 행을 끊는다.
