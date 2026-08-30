@@ -1071,7 +1071,7 @@ function regCard(id,flag,name,d){
 function renderMarketCards(){
   const m=STATE.markets||{};
   document.getElementById('cardKR').outerHTML=regCard('cardKR','🇰🇷','KOSPI',m.kr);
-  document.getElementById('cardUS').outerHTML=regCard('cardUS','🇺🇸','S&amp;P 500',m.us);
+  document.getElementById('cardUS').outerHTML=regCard('cardUS','🇺🇸','NASDAQ',m.us);
   document.getElementById('cardKR').addEventListener('click',()=>{userPicked=true;renderMarket('kr');});
   document.getElementById('cardUS').addEventListener('click',()=>{userPicked=true;renderMarket('us');});
 }
