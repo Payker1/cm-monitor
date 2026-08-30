@@ -82,6 +82,13 @@
   .pos .accent{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);}
   .pos.down .accent{background:var(--red);}
   .pos.flat .accent{background:var(--txt-faint);}
+  .pos .poshead{display:flex;align-items:center;gap:9px;}
+  .pos .posmain{flex:1;min-width:0;}
+  .logowrap{width:28px;height:28px;flex:none;position:relative;border-radius:50%;
+    overflow:hidden;background:var(--panel-2);}
+  .logowrap img{width:100%;height:100%;object-fit:cover;display:block;}
+  .logofallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono';font-weight:800;font-size:12px;color:var(--txt-dim);}
   .pos .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:2px;}
   /* 미장 한글명(name_ko)은 '프리포트 맥모란' 처럼 공백을 포함하는데, JetBrains Mono 는
@@ -495,6 +502,25 @@ const signWon=n=>(n>=0?'+':'−')+'₩'+Math.abs(Math.round(n||0)).toLocaleStrin
 const signAmt=n=>(n>=0?'+':'−')+Math.abs(Math.round(n||0)).toLocaleString('en-US');
 const maskAmtSign=n=>hideBal?'******':signAmt(n);
 const posName=p=>esc(p.market==='KR'?(p.name||p.sym):(p.name_ko||p.sym));
+// 회사 로고 — KR 은 네이버 증권 CDN(6자리 코드로 정적 URL 조립, API 호출 없음),
+// US 는 nvstly/icons(GitHub, 티커 파일명, NYSE/NASDAQ/OTC 커버). 둘 다 미공식
+// 소스라 깨질 수 있어 onerror 로 이니셜 원형 배지로 자동 대체한다 — 이 이미지
+// 로딩은 서버가 아니라 보는 사람 폰에서 직접 하는 거라 봇 서버 네트워크와 무관하다.
+function logoUrl(p){
+  if(p.market==='KR'){
+    const code=String(p.sym).replace(/\D/g,'').padStart(6,'0');
+    return `https://ssl.pstatic.net/imgstock/fn/real/logo/stock/Stock${code}.svg`;
+  }
+  return `https://raw.githubusercontent.com/nvstly/icons/main/ticker_icons/${encodeURIComponent(p.sym||'')}.png`;
+}
+function logoImg(p){
+  // 이니셜은 종목코드가 아니라 표시 이름 기준 — KR 은 코드 앞자리("005930"→"0")가
+  // 아니라 회사명 첫 글자("삼성전자"→"삼")가 나와야 한다.
+  const initial=esc(posName(p).charAt(0).toUpperCase());
+  return `<div class="logowrap"><img src="${logoUrl(p)}" alt="" loading="lazy" `
+    +`onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">`
+    +`<div class="logofallback">${initial}</div></div>`;
+}
 const signPct=n=>(n>=0?'+':'−')+Math.abs(n||0).toFixed(2)+'%';
 const px=(v,mkt)=>mkt==='US'?'$'+(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):Math.round(+v||0).toLocaleString('en-US');
 const cls=n=>n>=0?'green':'red';
@@ -935,8 +961,10 @@ function renderPositions(){
       l2txt=p.qty!=null?maskQty(p.qty)+'주':''; r2c=(Math.round(p.pl_krw||0)===0?'':c); r2txt=`${maskAmtSign(p.pl_krw)} (${signPct(p.pl_pct)})`;
     }
     return `<div class="pos ${accCls} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
+      <div class="poshead">${logoImg(p)}<div class="posmain">
       <div class="row1"><span class="symline"><span class="t-sym">${posName(p)}</span>${hotBadge(p,_hotSets)}${p.rs!=null?`<span class="rs ${rsCls(p.rs)}">RS ${p.rs}</span>`:''}${sectTag(p.sector)}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
       <div class="row2"><span class="t-l2">${l2txt}</span><span class="t-r2 ${r2c}">${r2txt}</span></div>
+      </div></div>
       <div class="exp">${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}" data-avg="${p.entry!=null?p.entry:''}"></div>`:''}<div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
   hydrateCharts('#posList .pos.open .chart');
