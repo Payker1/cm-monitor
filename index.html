@@ -92,7 +92,6 @@
   .pos .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .pos .row2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:2px;}
   .pos .row2l{display:flex;align-items:center;gap:6px;min-width:0;}
-  .pos .row2r{display:flex;align-items:center;gap:6px;}
   /* 미장 한글명(name_ko)은 '프리포트 맥모란' 처럼 공백을 포함하는데, JetBrains Mono 는
      고정폭이라 공백이 0.6em(≈8.4px) 로 잡히는 반면 한글 글리프는 폴백 폰트에서 나와
      단어 사이가 과하게 벌어져 보인다. word-spacing 으로 그 공백만 절반으로 줄인다
@@ -965,7 +964,7 @@ function renderPositions(){
     return `<div class="pos ${accCls} ${danger?'danger':''} ${open}" data-key="${key}"><div class="accent"></div>
       <div class="poshead">${logoImg(p)}<div class="posmain">
       <div class="row1"><span class="symline"><span class="t-sym">${posName(p)}</span>${hotBadge(p,_hotSets)}${p.rs!=null?`<span class="rs ${rsCls(p.rs)}">RS ${p.rs}</span>`:''}</span><span class="t-r1 ${r1c}">${r1txt}</span></div>
-      <div class="row2"><span class="t-l2">${l2txt}</span><span class="row2r">${sectTag(p.sector)}<span class="t-r2 ${r2c}">${r2txt}</span></span></div>
+      <div class="row2"><span class="row2l"><span class="t-l2">${l2txt}</span>${sectTag(p.sector)}</span><span class="t-r2 ${r2c}">${r2txt}</span></div>
       </div></div>
       <div class="exp">${p.has_chart?`<div class="chart" data-mk="${p.market}" data-sym="${esc(p.sym)}" data-avg="${p.entry!=null?p.entry:''}"></div>`:''}<div class="stopline"><span class="sl">보유 <b>${p.hold_days||0}일</b> · ${esc(p.stop_basis||'손절')} ${px(p.stop,p.market)}</span><span class="sv ${danger?'red':c}">↓ stop까지 −${Math.abs(p.stop_dist_pct||0).toFixed(1)}%</span></div></div></div>`;
   }).join('')):emptyMsg('보유 종목 없음');
