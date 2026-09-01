@@ -641,7 +641,7 @@ function sigRow(s){
     const wcBody=hascw?`<div class="sigexp">`+wc.map(c=>{
       const isAdd=c.action==='add';
       return `<div class="wcrow ${isAdd?'add':'rm'}"><span class="wcsign">${isAdd?'+':'−'}</span>`
-        +`<span class="wcnm">${esc(c.name||c.sym||'')}</span>`
+        +`<span class="wcnm">${esc(c.name||c.sym||'')}</span>${sectTag(c.sector)}`
         +(c.reason?`<span class="wcreason">${esc(c.reason)}</span>`:'')+`</div>`;
     }).join('')+`</div>`:'';
     return `<div class="sig ${hascw?'hascw':''} ${wcopen}" data-sk="${esc(key)}"><div class="ic alert">ALT</div><div class="body">
