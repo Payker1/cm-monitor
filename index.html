@@ -910,6 +910,10 @@ function hydrateTreemap(){
     const br=box.getBoundingClientRect(), er=el.getBoundingClientRect(), tr=tip.getBoundingClientRect();
     let L=er.left-br.left+er.width/2-tr.width/2, T=er.top-br.top-tr.height-6;
     if(T<2) T=er.top-br.top+er.height+6;
+    // 타일이 박스 높이 대부분을 차지하면(예: 압도적 비중의 바이오) 위/아래 둘 다
+    // 안 들어가 이 시점의 T 가 이미 박스 밖이다 — L 처럼 박스 안으로 clamp해서
+    // 화면에 안 보이는 곳에 렌더링되는 일이 없게 한다.
+    T=Math.max(2,Math.min(T,br.height-tr.height-2));
     tip.style.left=Math.max(2,Math.min(L,br.width-tr.width-2))+'px'; tip.style.top=T+'px';
     window.__tmTip=tip; window.__tmTipFor=el;
   };
